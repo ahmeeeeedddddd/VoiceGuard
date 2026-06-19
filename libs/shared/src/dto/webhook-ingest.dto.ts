@@ -2,13 +2,13 @@ import { IsString, IsUrl, IsOptional, IsObject } from 'class-validator';
 
 export class WebhookIngestDto {
   @IsString()
-  externalCallId: string;
+  externalCallId!: string;
 
   @IsString()
-  agentId: string;
+  agentId!: string;
 
   @IsUrl()
-  audioUrl: string;
+  audioUrl!: string;
 
   @IsOptional()
   @IsObject()

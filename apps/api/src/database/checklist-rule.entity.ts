@@ -6,16 +6,10 @@ export class ChecklistRuleEntity {
   id: string;
 
   @Column()
-  code: string; // e.g., AC-01
+  requiredPhrase: string;
 
-  @Column()
-  text: string;
-
-  @Column({ nullable: true })
-  description?: string;
-
-  @Column('simple-array', { nullable: true })
-  keywords?: string[];
+  @Column({ default: false })
+  isCriticalFail: boolean;
 
   @Column({ type: 'int', default: 10 })
   points: number;

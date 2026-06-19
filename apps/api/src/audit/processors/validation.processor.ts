@@ -32,7 +32,7 @@ export class ValidationProcessor {
       return;
     }
 
-    const rules = this.checklistRuleService.getActiveRules();
+    const rules = await this.checklistRuleService.getActiveRules();
     const results = this.checklistValidator.validate(record.transcript, rules);
     const riskLevel = this.checklistValidator.computeRiskLevel(results, rules);
 

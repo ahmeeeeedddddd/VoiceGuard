@@ -15,8 +15,8 @@ import { ChecklistRuleEntity } from './database/checklist-rule.entity';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
+      host: '127.0.0.1',
+      port: 5434,
       username: 'voiceguard_user',
       password: 'voiceguard_password',
       database: 'voiceguard_db',
@@ -26,14 +26,15 @@ import { ChecklistRuleEntity } from './database/checklist-rule.entity';
     }),
     BullModule.forRoot({
       redis: {
-        host: 'localhost',
+        host: '127.0.0.1',
         port: 6379,
       },
     }),
     RedisModule.forRoot({
       type: 'single',
-      url: 'redis://localhost:6379',
+      url: 'redis://127.0.0.1:6379',
     }),
+
     RealtimeModule,
     IngestionModule,
     AuditModule,

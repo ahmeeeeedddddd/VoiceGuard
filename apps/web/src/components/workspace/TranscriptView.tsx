@@ -1,3 +1,4 @@
+import React from 'react';
 import { MessageSquare, Download, CheckCircle2, Plus, StickyNote } from 'lucide-react';
 import { Card, Badge, Button } from '@voiceguard/ui';
 
@@ -131,6 +132,7 @@ export function TranscriptView({ currentTime, onSeek }: { currentTime: number; o
                 )
               )}
             </div>
+          </div>
           );
         })}
       </div>

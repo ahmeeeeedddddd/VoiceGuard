@@ -13,8 +13,6 @@ import { ChecklistRuleService } from './services/checklist-rule.service';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { WorkspaceController } from './controllers/workspace.controller';
 import { WorkspaceService } from './services/workspace.service';
-import { AuditService } from './services/audit.service';
-import { DeepgramService } from './stt/deepgram.service';
 
 const sttProvider = process.env.STT_PROVIDER === 'whisper'
   ? { provide: STT_PROVIDER_TOKEN, useClass: WhisperProvider }
@@ -30,14 +28,12 @@ const sttProvider = process.env.STT_PROVIDER === 'whisper'
   controllers: [WorkspaceController],
   providers: [
     sttProvider,
-    AuditService,
     ChecklistRuleService,
     ChecklistValidatorService,
     TranscriptionProcessor,
     ValidationProcessor,
-    DeepgramService,
     WorkspaceService,
   ],
-  exports: [AuditService, WorkspaceService, ChecklistValidatorService],
+  exports: [WorkspaceService, ChecklistValidatorService],
 })
 export class AuditModule {}

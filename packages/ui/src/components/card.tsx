@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../button';
+import { cn } from './button';
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (

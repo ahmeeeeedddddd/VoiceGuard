@@ -1,12 +1,10 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
-import { AuditService } from '../services/audit.service';
 import { WorkspaceService } from '../services/workspace.service';
 
 @Controller('audit/workspace')
 export class WorkspaceController {
   constructor(
     private readonly workspaceService: WorkspaceService,
-    private readonly auditService: AuditService,
   ) {}
 
   @Get(':id')
