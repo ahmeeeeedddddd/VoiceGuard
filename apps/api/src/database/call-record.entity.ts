@@ -38,4 +38,10 @@ export class CallRecordEntity {
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+
+  @Column({ type: 'jsonb', nullable: true })
+  overrides?: any; // Stores Record<string, { status: string; justification: string }>
+
+  @Column({ type: 'jsonb', nullable: true })
+  notes?: any; // Stores Array<{ timestamp: number; text: string }>
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 import { CallRecordEntity } from '../database/call-record.entity';
+import { ChecklistRuleEntity } from '../database/checklist-rule.entity';
 import { DeepgramProvider } from './stt/deepgram.provider';
 import { WhisperProvider } from './stt/whisper.provider';
 import { STT_PROVIDER_TOKEN } from './stt/stt.interface';
@@ -10,6 +11,10 @@ import { ValidationProcessor } from './processors/validation.processor';
 import { ChecklistValidatorService } from './services/checklist-validator.service';
 import { ChecklistRuleService } from './services/checklist-rule.service';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { WorkspaceController } from './controllers/workspace.controller';
+import { WorkspaceService } from './services/workspace.service';
+import { AuditService } from './services/audit.service';
+import { DeepgramService } from './stt/deepgram.service';
 
 const sttProvider = process.env.STT_PROVIDER === 'whisper'
   ? { provide: STT_PROVIDER_TOKEN, useClass: WhisperProvider }
@@ -17,20 +22,22 @@ const sttProvider = process.env.STT_PROVIDER === 'whisper'
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CallRecordEntity]),
-    BullModule.registerQueue(
-      { name: 'transcription' },
-      { name: 'validation' },
-    ),
+    TypeOrmModule.forFeature([CallRecordEntity, ChecklistRuleEntity]),
+    BullModule.registerQueue({ name: 'transcription' }),
+    BullModule.registerQueue({ name: 'validation' }),
     RealtimeModule,
   ],
+  controllers: [WorkspaceController],
   providers: [
     sttProvider,
+    AuditService,
+    ChecklistRuleService,
+    ChecklistValidatorService,
     TranscriptionProcessor,
     ValidationProcessor,
-    ChecklistValidatorService,
-    ChecklistRuleService,
+    DeepgramService,
+    WorkspaceService,
   ],
-  exports: [ChecklistValidatorService],
+  exports: [AuditService, WorkspaceService, ChecklistValidatorService],
 })
 export class AuditModule {}

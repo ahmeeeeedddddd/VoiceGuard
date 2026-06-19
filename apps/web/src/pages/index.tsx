@@ -1,78 +1,155 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import React from 'react';
+import Head from 'next/head';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { RiskHeatmap } from '@/components/dashboard/RiskHeatmap';
+import { Card, Badge, Button } from '@voiceguard/ui';
+import { 
+  PlayCircle, 
+  ShieldCheck, 
+  Clock, 
+  ArrowUpRight, 
+  MoreHorizontal,
+  ShieldAlert,
+  AlertTriangle,
+  Info,
+  CheckCircle2
+} from 'lucide-react';
+import Link from 'next/link';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const MOCK_ALERTS = [
+  { id: '1', time: '00:12', agent: 'agent-31', msg: 'PCI data spoken without redaction prompt', severity: 'CRITICAL', code: 'C-04A2' },
+  { id: '2', time: '00:34', agent: 'agent-07', msg: 'Disclosure script skipped (Section 3.2)', severity: 'WARNING', code: 'C-04A1' },
+  { id: '3', time: '01:02', agent: 'agent-12', msg: 'Sentiment dropped below -0.4 for 18s', severity: 'INFO', code: 'C-049F' },
+  { id: '4', time: '01:48', agent: 'agent-19', msg: 'Resolution confirmed · CSAT 5/5', severity: 'SUCCESS', code: 'C-049D' },
+  { id: '5', time: '02:11', agent: 'agent-22', msg: 'Hold time exceeded 90s without notice', severity: 'WARNING', code: 'C-049A' },
+  { id: '6', time: '02:40', agent: 'agent-04', msg: 'Profanity detected in agent channel', severity: 'CRITICAL', code: 'C-0497' },
+];
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const CLUSTERS = [
+  { name: 'Billing EN-US', pass: 94, warn: 5, fail: 1 },
+  { name: 'Retention EN-US', pass: 81, warn: 14, fail: 5 },
+  { name: 'Tech Support EN-GB', pass: 88, warn: 9, fail: 3 },
+  { name: 'Onboarding ES-MX', pass: 91, warn: 7, fail: 2 },
+  { name: 'Collections EN-US', pass: 73, warn: 19, fail: 8 },
+];
 
 export default function Home() {
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
-    >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the index.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <AppLayout>
+      <Head>
+        <title>Overview | VoiceGuard AI</title>
+      </Head>
+
+      <div className="flex h-full">
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-[1200px] mx-auto min-w-0">
+          {/* Header Dashboard Metrics */}
+          <div className="grid grid-cols-4 gap-4">
+            <MetricCard label="CALLS / HOUR" value="12,847" trend="+4.2%" trendUp={true} sub="vs 24h" icon={<Clock size={14} />} />
+            <MetricCard label="COMPLIANCE SCORE" value="98.41%" trend="+0.12%" trendUp={true} sub="vs 24h" icon={<ShieldCheck size={14} />} />
+            <MetricCard label="CRITICAL VIOLATIONS" value="27" trend="-18%" trendUp={false} sub="vs 24h" icon={<AlertTriangle size={14} />} />
+            <MetricCard label="AVG AUDIT LATENCY" value="412 ms" trend="-22ms" trendUp={false} sub="vs 24h" icon={<TrendingUpIcon />} />
+          </div>
+
+          {/* Heatmap Section */}
+          <RiskHeatmap />
+
+          {/* Cluster Breakdown Section */}
+          <Card className="p-6 border-gray-100 shadow-sm bg-white">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Cluster Breakdown</h3>
+              <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                LIVE STREAM
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {CLUSTERS.map((cluster, idx) => (
+                <div key={cluster.name} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700">Cluster {String(idx + 1).padStart(2, '0')} · {cluster.name}</span>
+                    <div className="flex gap-4 text-[10px] font-black tracking-tighter">
+                      <span className="text-green-500">{cluster.pass}%</span>
+                      <span className="text-yellow-500">{cluster.warn}%</span>
+                      <span className="text-red-500">{cluster.fail}%</span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex">
+                    <div style={{ width: `${cluster.pass}%` }} className="bg-green-500 h-full" />
+                    <div style={{ width: `${cluster.warn}%` }} className="bg-yellow-400 h-full" />
+                    <div style={{ width: `${cluster.fail}%` }} className="bg-red-500 h-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {/* Right Alert Sidebar */}
+        <aside className="w-80 border-l border-gray-100 bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.02)] flex flex-col hidden lg:flex">
+          <div className="p-5 border-b border-gray-50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Live Alert Ticker</h3>
+            </div>
+            <span className="text-[10px] font-bold text-gray-400">8 events · 5m</span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {MOCK_ALERTS.map((alert) => (
+              <div key={alert.id} className="p-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer relative">
+                <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                        <AlertIcon severity={alert.severity} />
+                        <span className="text-[10px] font-bold text-gray-500">{alert.time}</span>
+                        <span className="text-[10px] font-black text-blue-600">{alert.agent}</span>
+                    </div>
+                    <span className="text-[9px] font-mono font-bold text-gray-300">{alert.code}</span>
+                </div>
+                <p className="text-[11px] font-bold text-gray-800 leading-relaxed pr-6">{alert.msg}</p>
+                <MoreHorizontal size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+            <span>auto-refresh · 2s</span>
+            <button className="hover:text-gray-900 transition-colors">Pause</button>
+          </div>
+        </aside>
+      </div>
+    </AppLayout>
   );
+}
+
+function MetricCard({ label, value, trend, trendUp, sub, icon }: any) {
+  return (
+    <Card className="p-5 border-gray-100 shadow-sm bg-white/50 backdrop-blur-sm relative overflow-hidden group hover:scale-[1.02] transition-transform">
+      <div className="absolute top-4 right-4 text-gray-200 group-hover:text-blue-100 transition-colors">
+        {icon}
+      </div>
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">{label}</p>
+      <p className="text-2xl font-black text-gray-900 mb-1">{value}</p>
+      <div className="flex items-center gap-1.5">
+        <span className={`text-[10px] font-black ${trendUp ? 'text-green-500' : 'text-red-500'}`}>
+          {trendUp ? '▲' : '▼'} {trend}
+        </span>
+        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">{sub}</span>
+      </div>
+    </Card>
+  );
+}
+
+function AlertIcon({ severity }: { severity: string }) {
+    switch (severity) {
+        case 'CRITICAL': return <div className="p-1 rounded bg-red-50 border border-red-100 text-red-500"><ShieldAlert size={10} /></div>;
+        case 'WARNING': return <div className="p-1 rounded bg-yellow-50 border border-yellow-100 text-yellow-600"><AlertTriangle size={10} /></div>;
+        case 'SUCCESS': return <div className="p-1 rounded bg-green-50 border border-green-100 text-green-500"><CheckCircle2 size={10} /></div>;
+        default: return <div className="p-1 rounded bg-blue-50 border border-blue-100 text-blue-500"><Info size={10} /></div>;
+    }
+}
+
+function TrendingUpIcon() {
+    return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
 }

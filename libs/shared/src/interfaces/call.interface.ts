@@ -35,4 +35,6 @@ export interface CallRecord {
   ingestedAt?: Date;
   transcribedAt?: Date;
   riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  overrides?: Record<string, { status: 'PASSED' | 'FAILED'; justification: string }>;
+  notes?: Array<{ timestamp: number; text: string }>;
 }

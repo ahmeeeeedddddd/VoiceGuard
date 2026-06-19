@@ -6,7 +6,9 @@ import { RedisModule } from '@nestjs-modules/ioredis';
 import { RealtimeModule } from './realtime/realtime.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { AuditModule } from './audit/audit.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { CallRecordEntity } from './database/call-record.entity';
+import { ChecklistRuleEntity } from './database/checklist-rule.entity';
 
 @Module({
   imports: [
@@ -18,7 +20,7 @@ import { CallRecordEntity } from './database/call-record.entity';
       username: 'voiceguard_user',
       password: 'voiceguard_password',
       database: 'voiceguard_db',
-      entities: [CallRecordEntity],
+      entities: [CallRecordEntity, ChecklistRuleEntity],
       autoLoadEntities: true,
       synchronize: true, // Disable in production
     }),
@@ -35,6 +37,7 @@ import { CallRecordEntity } from './database/call-record.entity';
     RealtimeModule,
     IngestionModule,
     AuditModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

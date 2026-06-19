@@ -9,6 +9,8 @@ import { IngestionDedupService } from './services/ingestion-dedup.service';
 import { S3IngestionSource } from './services/s3-ingestion.source';
 import { S3PollCron } from './jobs/s3-poll.cron';
 import { RealtimeModule } from '../realtime/realtime.module';
+import { ManualUploadController } from './controllers/manual-upload.controller';
+import { ManualUploadService } from './services/manual-upload.service';
 
 @Module({
   imports: [
@@ -17,13 +19,14 @@ import { RealtimeModule } from '../realtime/realtime.module';
     ScheduleModule.forRoot(),
     RealtimeModule,
   ],
-  controllers: [WebhookController],
+  controllers: [WebhookController, ManualUploadController],
   providers: [
     WebhookIngestionService,
     IngestionDedupService,
     S3IngestionSource,
     S3PollCron,
+    ManualUploadService,
   ],
-  exports: [IngestionDedupService],
+  exports: [IngestionDedupService, ManualUploadService],
 })
 export class IngestionModule {}
