@@ -9,6 +9,8 @@ import { AuditModule } from './audit/audit.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { CallRecordEntity } from './database/call-record.entity';
 import { ChecklistRuleEntity } from './database/checklist-rule.entity';
+import { UserEntity } from './database/user.entity';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -20,7 +22,7 @@ import { ChecklistRuleEntity } from './database/checklist-rule.entity';
       username: 'voiceguard_user',
       password: 'voiceguard_password',
       database: 'voiceguard_db',
-      entities: [CallRecordEntity, ChecklistRuleEntity],
+      entities: [CallRecordEntity, ChecklistRuleEntity, UserEntity],
       autoLoadEntities: true,
       synchronize: true, // Disable in production
     }),
@@ -39,6 +41,7 @@ import { ChecklistRuleEntity } from './database/checklist-rule.entity';
     IngestionModule,
     AuditModule,
     AnalyticsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

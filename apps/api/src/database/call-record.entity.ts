@@ -44,4 +44,13 @@ export class CallRecordEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   notes?: any; // Stores Array<{ timestamp: number; text: string }>
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastAuditedAt?: Date;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  auditedBy?: string;
+
+  @Column({ type: 'boolean', default: false })
+  isAutomaticFail?: boolean;
 }

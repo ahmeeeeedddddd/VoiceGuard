@@ -37,4 +37,7 @@ export interface CallRecord {
   riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
   overrides?: Record<string, { status: 'PASSED' | 'FAILED'; justification: string }>;
   notes?: Array<{ timestamp: number; text: string }>;
+  lastAuditedAt?: Date;
+  auditedBy?: string;
+  isAutomaticFail?: boolean;
 }

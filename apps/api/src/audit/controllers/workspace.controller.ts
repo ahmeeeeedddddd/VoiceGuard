@@ -1,7 +1,11 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { WorkspaceService } from '../services/workspace.service';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
+import { Role } from '@voiceguard/shared';
 
 @Controller('audit/workspace')
+@UseGuards(RolesGuard)
 export class WorkspaceController {
   constructor(
     private readonly workspaceService: WorkspaceService,
@@ -9,10 +13,12 @@ export class WorkspaceController {
 
   @Get(':id')
   async getWorkspaceData(@Param('id') id: string) {
+    // Everyone can view
     return this.workspaceService.getCallWithChecklist(id);
   }
 
   @Post(':id/override')
+  @Roles(Role.ADMIN, Role.AUDITOR)
   async submitOverride(
     @Param('id') id: string,
     @Body() body: { ruleId: string; status: 'PASSED' | 'FAILED'; justification: string },
@@ -21,10 +27,20 @@ export class WorkspaceController {
   }
 
   @Post(':id/note')
+  @Roles(Role.ADMIN, Role.AUDITOR)
   async addNote(
     @Param('id') id: string,
     @Body() body: { timestamp: number; text: string },
   ) {
     return this.workspaceService.addNote(id, body.timestamp, body.text);
+  }
+
+  @Post(':id/submit')
+  @Roles(Role.ADMIN, Role.AUDITOR)
+  async submitAudit(
+    @Param('id') id: string,
+    @Body() body: { auditorName: string },
+  ) {
+    return this.workspaceService.submitAudit(id, body.auditorName);
   }
 }
