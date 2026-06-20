@@ -4,7 +4,7 @@ import { Button } from '@voiceguard/ui';
 
 export function Header() {
   return (
-    <header className="h-16 border-b border-gray-100 flex items-center justify-between px-8 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+    <header className="h-16 border-b border-gray-100 flex items-center justify-between px-8 bg-white/80 backdrop-blur-sm sticky top-0 z-10 print:hidden">
       <div className="flex items-center relative w-96 max-w-full">
         <Search className="absolute left-3 text-gray-400" size={16} />
         <input 

@@ -7,7 +7,6 @@ export function RiskHeatmap() {
     if (score > 85) return 'bg-[#10b981]'; // Green (Pass)
     if (score > 60) return 'bg-[#f59e0b]'; // Orange (Warn)
     if (score > 35) return 'bg-[#ef4444]'; // Red (Fail)
-    if (score > 15) return 'bg-[#f472b6]'; // Pink (Idle)
     return 'bg-[#e5e7eb]'; // Gray (Idle)
   };
 

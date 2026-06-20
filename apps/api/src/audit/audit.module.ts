@@ -12,6 +12,7 @@ import { ChecklistValidatorService } from './services/checklist-validator.servic
 import { ChecklistRuleService } from './services/checklist-rule.service';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { WorkspaceController } from './controllers/workspace.controller';
+import { ChecklistRuleController } from './controllers/checklist-rule.controller';
 import { WorkspaceService } from './services/workspace.service';
 
 const sttProvider = process.env.STT_PROVIDER === 'whisper'
@@ -25,7 +26,7 @@ const sttProvider = process.env.STT_PROVIDER === 'whisper'
     BullModule.registerQueue({ name: 'validation' }),
     RealtimeModule,
   ],
-  controllers: [WorkspaceController],
+  controllers: [WorkspaceController, ChecklistRuleController],
   providers: [
     sttProvider,
     ChecklistRuleService,

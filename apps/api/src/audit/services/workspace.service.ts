@@ -15,6 +15,10 @@ export class WorkspaceService {
     private readonly validatorService: ChecklistValidatorService,
   ) {}
 
+  async getAllCalls() {
+    return this.callRepository.find();
+  }
+
   async getCallWithChecklist(id: string) {
     const call = await this.callRepository.findOneBy({ id });
     if (!call) throw new NotFoundException('Call not found');

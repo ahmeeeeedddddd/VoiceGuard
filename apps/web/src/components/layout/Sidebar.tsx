@@ -7,7 +7,9 @@ import {
   ShieldCheck, 
   BarChart3, 
   Settings,
-  Shield
+  Shield,
+  FileText,
+  Users
 } from 'lucide-react';
 import { cn } from '@voiceguard/ui';
 
@@ -16,6 +18,8 @@ const NAV_ITEMS = [
   { label: 'Audit Workspace', icon: Mic2, href: '/workspace' },
   { label: 'Compliance', icon: ShieldCheck, href: '/compliance' },
   { label: 'Analytics', icon: BarChart3, href: '/analytics' },
+  { label: 'Reports', icon: FileText, href: '/reports' },
+  { label: 'Users', icon: Users, href: '/users' },
   { label: 'Settings', icon: Settings, href: '/settings' },
 ];
 
@@ -23,7 +27,7 @@ export function Sidebar() {
   const router = useRouter();
 
   return (
-    <aside className="w-64 border-r border-gray-100 bg-gray-50/50 flex flex-col h-screen">
+    <aside className="w-64 border-r border-gray-100 bg-gray-50/50 flex flex-col h-screen print:hidden">
       <div className="p-6 flex items-center gap-2 mb-4">
         <div className="bg-blue-600 p-1.5 rounded-lg text-white">
           <Shield size={20} fill="currentColor" />

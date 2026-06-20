@@ -4,20 +4,25 @@ import { RolesGuard } from '../../auth/roles.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { Role } from '@voiceguard/shared';
 
-@Controller('audit/workspace')
+@Controller('audit')
 @UseGuards(RolesGuard)
 export class WorkspaceController {
   constructor(
     private readonly workspaceService: WorkspaceService,
   ) {}
 
-  @Get(':id')
+  @Get('calls')
+  async getAllCalls() {
+    return this.workspaceService.getAllCalls();
+  }
+
+  @Get('workspace/:id')
   async getWorkspaceData(@Param('id') id: string) {
     // Everyone can view
     return this.workspaceService.getCallWithChecklist(id);
   }
 
-  @Post(':id/override')
+  @Post('workspace/:id/override')
   @Roles(Role.ADMIN, Role.AUDITOR)
   async submitOverride(
     @Param('id') id: string,
@@ -26,7 +31,7 @@ export class WorkspaceController {
     return this.workspaceService.submitOverride(id, body.ruleId, body.status, body.justification);
   }
 
-  @Post(':id/note')
+  @Post('workspace/:id/note')
   @Roles(Role.ADMIN, Role.AUDITOR)
   async addNote(
     @Param('id') id: string,
@@ -35,7 +40,7 @@ export class WorkspaceController {
     return this.workspaceService.addNote(id, body.timestamp, body.text);
   }
 
-  @Post(':id/submit')
+  @Post('workspace/:id/submit')
   @Roles(Role.ADMIN, Role.AUDITOR)
   async submitAudit(
     @Param('id') id: string,

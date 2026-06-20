@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { CallRecord, ChecklistRule, ChecklistResult } from '@voiceguard/shared';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 interface WorkspaceData {
   call: CallRecord;
@@ -13,146 +15,199 @@ export default function ReportView() {
   const { id } = router.query;
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
+    setLoading(true);
+    setError(null);
     fetch(`http://localhost:3001/audit/workspace/${id}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        return res.json();
+      })
       .then((json) => {
+        // Ensure the response is a valid workspace object, not an error body
+        if (!json.call) throw new Error('Invalid response: missing call data');
         setData(json);
-        setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="p-8 text-gray-500">Loading report...</div>;
-  if (!data) return <div className="p-8 text-red-500">Report not found.</div>;
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading report...</div>
+      </AppLayout>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center h-full gap-3">
+          <p className="text-red-500 font-bold text-sm">Could not load report.</p>
+          <p className="text-gray-400 text-xs font-mono">{error}</p>
+          <p className="text-gray-400 text-xs">Call ID: {id}</p>
+          <button onClick={() => router.back()} className="mt-2 text-xs text-blue-600 hover:underline">← Go Back</button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const { call, rules } = data;
   const overrides = call.overrides || {};
   const notes = call.notes || [];
 
-  const handlePrint = () => {
-    window.print();
-  };
+  let pointsEarned = 0;
+  let totalPoints = 0;
+  let isAutoFail = call.isAutomaticFail || false;
+
+  rules.forEach(rule => {
+    totalPoints += rule.points;
+    const override = overrides[rule.id];
+    const autoResult = data.automatedResults?.find(r => r.ruleId === rule.id);
+    const finalStatus = override ? override.status : (autoResult ? autoResult.status : 'N/A');
+    if (finalStatus === 'PASSED') {
+      pointsEarned += rule.points;
+    } else if (finalStatus === 'FAILED' && rule.isCriticalFail) {
+      isAutoFail = true;
+    }
+  });
+
+  const calculatedScore = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0;
+  const displayScore = call.score !== undefined && call.score !== null ? call.score : calculatedScore;
+  const displayStatus = isAutoFail ? 'FAILED' : (call.status === 'INGESTED' ? 'EVALUATING' : call.status);
+
+  const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 print:bg-white print:py-0">
-      <div className="max-w-4xl mx-auto space-y-6">
-        
-        {/* Header Actions (Hidden in Print) */}
-        <div className="flex justify-between items-center print:hidden">
-          <button onClick={() => router.back()} className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            &larr; Back
-          </button>
-          <button 
-            onClick={handlePrint}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-          >
-            Export PDF
-          </button>
-        </div>
+    <AppLayout>
+      <Head>
+        <title>Audit Report — {call.externalId} | VoiceGuard AI</title>
+      </Head>
 
-        {/* Report Document */}
-        <div className="bg-white shadow sm:rounded-lg p-8 print:shadow-none print:p-0">
-          
-          {/* Branding Header */}
-          <div className="border-b border-gray-200 pb-6 mb-6 flex justify-between items-end">
+      <div className="flex-1 overflow-y-auto print:overflow-visible p-6 print:p-0">
+        <div className="max-w-4xl mx-auto space-y-6">
+
+          {/* Header Actions — hidden in print */}
+          <div className="flex justify-between items-center print:hidden">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Quality Audit Report</h1>
-              <p className="text-sm text-gray-500 mt-1">Call ID: {call.externalId}</p>
+              <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">Quality Audit Report</h2>
+              <p className="text-sm font-bold text-gray-900 mt-0.5">{call.externalId}</p>
             </div>
-            <div className="text-right">
-              <h2 className="text-4xl font-black text-indigo-600">{call.score ?? 0}%</h2>
-              <p className="text-sm text-gray-500 uppercase tracking-wide font-medium mt-1">Overall Score</p>
-            </div>
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+            >
+              Export PDF
+            </button>
           </div>
 
-          {/* Automatic Fail Banner */}
-          {call.isAutomaticFail && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 print:border-red-500 print:bg-transparent">
-              <div className="flex">
-                <div className="ml-3">
-                  <p className="text-sm text-red-700 font-bold">
-                    AUTOMATIC FAIL
-                  </p>
-                  <p className="text-sm text-red-700 mt-1">
-                    This call missed one or more critical compliance items. Despite the numerical score, this audit is considered a failure.
-                  </p>
-                </div>
-              </div>
+          {/* Score Hero Card */}
+          <div className={`rounded-xl p-6 flex items-center justify-between shadow-sm border ${isAutoFail ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}>
+            <div>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Overall Score</p>
+              <p className="text-6xl font-black text-gray-900">{displayScore}<span className="text-2xl text-gray-400">%</span></p>
             </div>
-          )}
+            <div className="text-right space-y-1">
+              {isAutoFail ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 border border-red-200">
+                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="text-xs font-black text-red-700 uppercase tracking-wide">Automatic Fail</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-xs font-black text-green-700 uppercase tracking-wide">{displayStatus}</span>
+                </div>
+              )}
+              {isAutoFail && (
+                <p className="text-xs text-red-600 mt-2 max-w-[200px] leading-relaxed">
+                  A critical compliance item was missed. This audit is a failure regardless of the score.
+                </p>
+              )}
+            </div>
+          </div>
 
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-8 bg-gray-50 p-4 rounded-md print:bg-transparent print:border print:border-gray-200">
-            <div>
-              <span className="block text-xs text-gray-500 uppercase">Agent ID</span>
-              <span className="block text-sm font-medium text-gray-900">{call.agentId || 'Unknown'}</span>
-            </div>
-            <div>
-              <span className="block text-xs text-gray-500 uppercase">Audit Status</span>
-              <span className="block text-sm font-medium text-gray-900">{call.status}</span>
-            </div>
-            <div>
-              <span className="block text-xs text-gray-500 uppercase">Last Audited</span>
-              <span className="block text-sm font-medium text-gray-900">
-                {call.lastAuditedAt ? new Date(call.lastAuditedAt).toLocaleString() : 'N/A'}
-              </span>
-            </div>
-            <div>
-              <span className="block text-xs text-gray-500 uppercase">Audited By</span>
-              <span className="block text-sm font-medium text-gray-900">{call.auditedBy || 'System / Auto'}</span>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: 'Agent ID', value: call.agentId || 'Unknown' },
+              { label: 'Status', value: displayStatus },
+              { label: 'Last Audited', value: call.lastAuditedAt ? new Date(call.lastAuditedAt).toLocaleString() : 'Not yet submitted' },
+              { label: 'Audited By', value: call.auditedBy || 'System / Auto' },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+                <p className="text-sm font-bold text-gray-900 truncate">{value}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Checklist Details */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Checklist Evaluation</h3>
-            <ul className="space-y-4">
-              {rules.map(rule => {
-                const override = overrides[rule.id];
-                const autoResult = data.automatedResults?.find(r => r.ruleId === rule.id);
-                const finalStatus = override ? override.status : (autoResult ? autoResult.status : 'N/A');
-                
-                return (
-                  <li key={rule.id} className="border border-gray-100 rounded-md p-4 flex justify-between items-start print:border-gray-300">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        {rule.requiredPhrase} {rule.isCriticalFail && <span className="text-red-500 text-xs ml-1">(Critical)</span>}
-                      </p>
-                      {override?.justification && (
-                        <p className="text-sm text-gray-500 mt-2 italic flex items-center">
-                          <span className="mr-2">📝 Note:</span> {override.justification}
+          {/* Checklist Evaluation */}
+          <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+              <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Checklist Evaluation</h3>
+              <span className="text-[10px] font-bold text-gray-400">{rules.length} rules</span>
+            </div>
+            {rules.length === 0 ? (
+              <div className="p-6 text-center text-sm text-gray-400">No checklist rules found for this call.</div>
+            ) : (
+              <ul className="divide-y divide-gray-50">
+                {rules.map(rule => {
+                  const override = overrides[rule.id];
+                  const autoResult = data.automatedResults?.find(r => r.ruleId === rule.id);
+                  const finalStatus = override ? override.status : (autoResult ? autoResult.status : 'N/A');
+                  const isPassed = finalStatus === 'PASSED';
+                  const isFailed = finalStatus === 'FAILED';
+
+                  return (
+                    <li key={rule.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                          {rule.requiredPhrase}
+                          {rule.isCriticalFail && (
+                            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-red-50 border border-red-100 text-red-500">Critical</span>
+                          )}
                         </p>
-                      )}
-                    </div>
-                    <div className="ml-4 flex flex-col items-end">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        finalStatus === 'PASSED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {finalStatus}
-                      </span>
-                      <span className="text-xs text-gray-400 mt-1">{rule.points} pts</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                        {override?.justification && (
+                          <p className="text-xs text-gray-500 mt-1 italic">📝 {override.justification}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-bold text-gray-300">{rule.points} pts</span>
+                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-full ${
+                          isPassed ? 'bg-green-50 text-green-700 border border-green-100' :
+                          isFailed ? 'bg-red-50 text-red-700 border border-red-100' :
+                          'bg-gray-50 text-gray-400 border border-gray-100'
+                        }`}>
+                          {finalStatus}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
-          {/* General Notes */}
+          {/* Reviewer Notes */}
           {notes.length > 0 && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Reviewer Notes</h3>
-              <div className="space-y-3">
+            <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-50">
+                <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Reviewer Notes</h3>
+              </div>
+              <div className="divide-y divide-gray-50">
                 {notes.map((note, idx) => (
-                  <div key={idx} className="bg-gray-50 p-3 rounded-md text-sm text-gray-700 print:bg-transparent print:border print:border-gray-200">
-                    <span className="font-mono text-xs text-indigo-600 mr-2">[{new Date(note.timestamp).toISOString().substr(11, 8)}]</span>
-                    {note.text}
+                  <div key={idx} className="px-6 py-4 flex gap-3">
+                    <span className="font-mono text-[10px] text-blue-500 shrink-0 mt-0.5">
+                      [{String(Math.floor(note.timestamp / 1000 / 60)).padStart(2, '0')}:{String(Math.floor(note.timestamp / 1000) % 60).padStart(2, '0')}]
+                    </span>
+                    <p className="text-sm text-gray-700">{note.text}</p>
                   </div>
                 ))}
               </div>
@@ -161,6 +216,6 @@ export default function ReportView() {
 
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }

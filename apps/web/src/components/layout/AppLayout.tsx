@@ -4,12 +4,12 @@ import { Header } from './Header';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-gray-50/30 overflow-hidden font-sans antialiased text-gray-900">
+    <div className="flex h-screen print:h-auto bg-gray-50/30 overflow-hidden print:overflow-visible font-sans antialiased text-gray-900">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-white/40">
-          <div className="h-full blueprint-bg relative">
+        <main className="flex-1 overflow-y-auto print:overflow-visible bg-white/40">
+          <div className="h-full print:h-auto blueprint-bg relative">
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-50/20 via-transparent to-transparent pointer-events-none" />
             {children}
           </div>

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import Head from 'next/head';
 import { Role, User } from '@voiceguard/shared';
+import { AppLayout } from '@/components/layout/AppLayout';
 
 export default function UsersManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -81,11 +83,16 @@ export default function UsersManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <AppLayout>
+      <Head>
+        <title>User Management | VoiceGuard AI</title>
+      </Head>
+      <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-6xl mx-auto space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage user roles and permissions (Admin Only).</p>
+          <h1 className="text-xs font-black text-gray-400 uppercase tracking-widest">Settings</h1>
+          <p className="text-2xl font-black text-gray-900 mt-1">User Management</p>
+          <p className="mt-1 text-sm text-gray-500">Manage user roles and permissions. Admin access only.</p>
         </div>
 
         {/* Create User Form */}
@@ -159,7 +166,8 @@ export default function UsersManagement() {
             </table>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
