@@ -2,11 +2,8 @@ node_modules
 dist
 .env
 postgres-data
-*.md
 *.pdf
 !README.md
-!PROJECT_HANDOFF.md
 .next
 *.log
 *.tsbuildinfo
-!PROJECT_HANDOFF.pdf
