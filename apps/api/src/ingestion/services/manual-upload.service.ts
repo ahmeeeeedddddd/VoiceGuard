@@ -1,19 +1,20 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CallRecordEntity } from '../../database/call-record.entity';
 import { AuditStatus } from '@voiceguard/shared';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 import { v4 as uuidv4 } from 'uuid';
+import { ISttProvider, STT_PROVIDER_TOKEN } from '../../audit/stt/stt.interface';
 
 @Injectable()
 export class ManualUploadService {
+  private readonly logger = new Logger(ManualUploadService.name);
+
   constructor(
     @InjectRepository(CallRecordEntity)
     private readonly callRepository: Repository<CallRecordEntity>,
-    @InjectQueue('transcription')
-    private readonly transcriptionQueue: Queue,
+    @Inject(STT_PROVIDER_TOKEN)
+    private readonly sttProvider: ISttProvider,
   ) {}
 
   async handleUpload(file: Express.Multer.File) {
@@ -21,8 +22,6 @@ export class ManualUploadService {
       throw new BadRequestException('Only MP3 files are supported');
     }
 
-    // In a real app, you'd upload this to S3.
-    // For this demo, we'll assume a local path or a mock URL.
     const audioUrl = `uploads/${file.filename}`; 
 
     const call = this.callRepository.create({
@@ -30,17 +29,27 @@ export class ManualUploadService {
       externalId: `MANUAL-${Date.now()}`,
       audioUrl,
       source: 'MANUAL_UPLOAD',
-      status: AuditStatus.INGESTED,
+      status: AuditStatus.PROCESSING,
     });
 
-    const savedCall = await this.callRepository.save(call);
+    let savedCall = await this.callRepository.save(call);
 
-    // Trigger transcription
-    await this.transcriptionQueue.add('process', {
-      callId: savedCall.id,
-      audioUrl: savedCall.audioUrl,
-    });
+    // Bypass queue and transcribe synchronously for immediate Deepgram feedback
+    try {
+      this.logger.log(`Starting real Deepgram transcription for ${savedCall.externalId}`);
+      const transcript = await this.sttProvider.transcribe(savedCall.audioUrl);
+      savedCall.transcript = transcript;
+      savedCall.transcribedAt = new Date();
+      savedCall.status = AuditStatus.TRANSCRIBED;
+      savedCall = await this.callRepository.save(savedCall);
+      this.logger.log(`Completed transcription for ${savedCall.externalId}`);
+    } catch (err) {
+      this.logger.error(`Transcription failed inline for ${savedCall.externalId}: ${err.message}`);
+      savedCall.status = AuditStatus.FAILED;
+      await this.callRepository.save(savedCall);
+    }
 
     return savedCall;
   }
 }
+

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { ChecklistRuleService } from '../services/checklist-rule.service';
 
 @Controller('audit/checklist-rules')
@@ -21,4 +21,13 @@ export class ChecklistRuleController {
   async delete(@Param('id') id: string) {
     return this.ruleService.deleteRule(id);
   }
+
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: Partial<{ requiredPhrase: string; isCriticalFail: boolean; points: number; category: string }>,
+  ) {
+    return this.ruleService.updateRule(id, body);
+  }
 }
+

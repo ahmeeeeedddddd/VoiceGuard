@@ -30,6 +30,11 @@ export class S3PollCron {
 
   @Cron(process.env.S3_POLL_CRON || CronExpression.EVERY_5_MINUTES)
   async pollS3() {
+    if (!process.env.AWS_S3_BUCKET) {
+      if (Math.random() < 0.05) this.logger.debug('[S3Poll] Skipped: AWS_S3_BUCKET not configured');
+      return;
+    }
+    
     this.logger.log('[S3Poll] Starting S3 poll cycle');
 
     // Retrieve last watermark from Redis (survives restarts)

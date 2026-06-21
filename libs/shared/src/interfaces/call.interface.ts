@@ -13,6 +13,7 @@ export interface TranscriptWord {
   startMs: number;
   endMs: number;
   confidence: number;
+  speaker?: number; // Optional speaker ID from diarization
 }
 
 export interface TranscriptPayload {
@@ -20,6 +21,7 @@ export interface TranscriptPayload {
   words: TranscriptWord[];
   sttProvider: 'DEEPGRAM' | 'WHISPER';
   language?: string;
+  speakerLabels?: Record<number, 'AGENT' | 'CUSTOMER'>;
 }
 
 export interface CallRecord {

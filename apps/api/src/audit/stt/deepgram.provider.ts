@@ -1,26 +1,45 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ISttProvider } from './stt.interface';
 import { TranscriptPayload, TranscriptWord } from '@voiceguard/shared';
 import * as https from 'https';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class DeepgramProvider implements ISttProvider {
   private readonly logger = new Logger(DeepgramProvider.name);
-  private readonly apiKey = process.env.DEEPGRAM_API_KEY || '';
   private readonly apiUrl = 'https://api.deepgram.com/v1/listen';
 
-  async transcribe(audioUrl: string): Promise<TranscriptPayload> {
-    this.logger.log(`Transcribing via Deepgram: ${audioUrl}`);
+  constructor(private configService: ConfigService) {}
 
-    const response = await this.callDeepgramApi(audioUrl);
+  async transcribe(audioUrlOrPath: string): Promise<TranscriptPayload> {
+    this.logger.log(`Transcribing via Deepgram: ${audioUrlOrPath}`);
+
+    const response = await this.callDeepgramApi(audioUrlOrPath);
     return this.mapToTranscriptPayload(response);
   }
 
-  private callDeepgramApi(audioUrl: string): Promise<any> {
-    const body = JSON.stringify({ url: audioUrl });
+  private async callDeepgramApi(source: string): Promise<any> {
+    const isUrl = source.startsWith('http');
+    let body: Buffer;
+    let contentType: string;
+
+    if (isUrl) {
+      body = Buffer.from(JSON.stringify({ url: source }));
+      contentType = 'application/json';
+    } else {
+      // Local file path
+      const fullPath = path.isAbsolute(source) ? source : path.join(process.cwd(), source);
+      if (!fs.existsSync(fullPath)) {
+        throw new Error(`File not found: ${fullPath}`);
+      }
+      body = fs.readFileSync(fullPath);
+      contentType = 'audio/mpeg'; // Adjust if supporting more formats
+    }
 
     return new Promise((resolve, reject) => {
-      const url = new URL(`${this.apiUrl}?model=nova-2&smart_format=true&utterances=true&words=true`);
+      const url = new URL(`${this.apiUrl}?model=nova-2&smart_format=true&utterances=true&words=true&diarize=true`);
 
       const req = https.request(
         {
@@ -28,9 +47,9 @@ export class DeepgramProvider implements ISttProvider {
           path: url.pathname + url.search,
           method: 'POST',
           headers: {
-            Authorization: `Token ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(body),
+            Authorization: `Token ${this.configService.get<string>('DEEPGRAM_API_KEY')}`,
+            'Content-Type': contentType,
+            'Content-Length': body.length,
           },
         },
         (res) => {
@@ -62,6 +81,7 @@ export class DeepgramProvider implements ISttProvider {
       startMs: Math.round(w.start * 1000),
       endMs: Math.round(w.end * 1000),
       confidence: w.confidence,
+      speaker: w.speaker, // Map Deepgram speaker ID
     }));
 
     return {
@@ -69,6 +89,10 @@ export class DeepgramProvider implements ISttProvider {
       words,
       sttProvider: 'DEEPGRAM',
       language: response?.results?.channels?.[0]?.detected_language,
+      speakerLabels: {
+        0: 'AGENT',
+        1: 'CUSTOMER',
+      },
     };
   }
 }

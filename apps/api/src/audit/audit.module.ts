@@ -35,6 +35,6 @@ const sttProvider = process.env.STT_PROVIDER === 'whisper'
     ValidationProcessor,
     WorkspaceService,
   ],
-  exports: [WorkspaceService, ChecklistValidatorService],
+  exports: [WorkspaceService, ChecklistValidatorService, sttProvider],
 })
 export class AuditModule {}

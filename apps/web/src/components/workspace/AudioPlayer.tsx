@@ -13,24 +13,58 @@ export function AudioPlayer({
   currentTime, 
   setCurrentTime, 
   isPlaying, 
-  setIsPlaying 
+  setIsPlaying,
+  audioUrl
 }: { 
   currentTime: number; 
   setCurrentTime: (t: number) => void;
   isPlaying: boolean;
   setIsPlaying: (p: boolean) => void;
+  audioUrl?: string;
 }) {
-  const duration = 97; // 1:37 in seconds
+  const [duration, setDuration] = React.useState(0.1);
+  const [volume, setVolume] = React.useState(0.7);
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  const fullAudioUrl = audioUrl
+    ? audioUrl.startsWith('http') 
+      ? audioUrl  // Already absolute (e.g., S3 URL from API-ingested call)
+      : `http://localhost:3001/${audioUrl}` // Relative path from manual upload
+    : '';
 
   React.useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentTime(Math.min(currentTime + 1, duration));
-      }, 1000);
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch(e => console.error('Audio play failed', e));
+      } else {
+        audioRef.current.pause();
+      }
     }
-    return () => clearInterval(interval);
-  }, [isPlaying, currentTime]);
+  }, [isPlaying]);
+
+  React.useEffect(() => {
+    if (audioRef.current && Math.abs(audioRef.current.currentTime - currentTime) > 0.5) {
+      audioRef.current.currentTime = currentTime;
+    }
+  }, [currentTime]);
+
+  React.useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
 
   const progress = (currentTime / duration) * 100;
   const formatTime = (s: number) => {
@@ -41,10 +75,19 @@ export function AudioPlayer({
 
   return (
     <Card className="p-4 border-gray-100 shadow-sm bg-white/80 backdrop-blur-sm">
+      {fullAudioUrl && (
+        <audio 
+          ref={audioRef}
+          src={fullAudioUrl}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={() => setIsPlaying(false)}
+        />
+      )}
       <div className="flex items-center gap-6">
         {/* Controls */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="hover:bg-blue-50 text-gray-400">
+          <Button variant="ghost" size="icon" className="hover:bg-blue-50 text-gray-400" onClick={() => setCurrentTime(Math.max(0, currentTime - 5))}>
             <SkipBack size={20} />
           </Button>
           <Button 
@@ -53,7 +96,7 @@ export function AudioPlayer({
           >
             {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
           </Button>
-          <Button variant="ghost" size="icon" className="hover:bg-blue-50 text-gray-400">
+          <Button variant="ghost" size="icon" className="hover:bg-blue-50 text-gray-400" onClick={() => setCurrentTime(Math.min(duration, currentTime + 5))}>
             <SkipForward size={20} />
           </Button>
         </div>
@@ -63,22 +106,53 @@ export function AudioPlayer({
           <span className="text-gray-900 font-bold">{formatTime(currentTime)}</span> / {formatTime(duration)}
         </div>
 
-        {/* Waveform Visualization Mockup */}
+        {/* Waveform Visualization */}
         <div className="flex-1 h-12 relative flex items-center gap-[2px] cursor-pointer" 
              onClick={(e: React.MouseEvent<HTMLDivElement>) => {
                const rect = e.currentTarget.getBoundingClientRect();
                const x = e.clientX - rect.left;
-               setCurrentTime((x / rect.width) * duration);
+               const newTime = (x / rect.width) * duration;
+               setCurrentTime(newTime);
+               if (audioRef.current) audioRef.current.currentTime = newTime;
              }}>
-          {Array.from({ length: 60 }).map((_, i) => (
-            <div 
-              key={i}
-              className={`flex-1 rounded-full ${i < (progress * 0.6) ? 'bg-blue-500' : 'bg-gray-200'}`}
-              style={{ height: `${Math.random() * 100}%` }}
-            />
-          ))}
+          {React.useMemo(() => {
+            const seed = audioUrl ? audioUrl.length : 42;
+            return Array.from({ length: 60 }).map((_, i) => {
+              const heightCalc = ((Math.sin(i * seed) * 0.5 + 0.5) * 85) + (i % 3) * 10;
+              const pseudoRandomHeight = Math.max(15, Math.min(100, heightCalc));
+              return (
+                <div 
+                  key={`bg-${i}`}
+                  className={`flex-1 rounded-full bg-gray-200 transition-colors duration-200`}
+                  style={{ height: `${pseudoRandomHeight}%` }}
+                />
+              );
+            });
+          }, [audioUrl])}
+          
+          {/* Active wave overlay using clip-path for smooth progress */}
+          <div 
+            className="absolute inset-0 flex items-center gap-[2px] pointer-events-none"
+            style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
+          >
+            {React.useMemo(() => {
+              const seed = audioUrl ? audioUrl.length : 42;
+              return Array.from({ length: 60 }).map((_, i) => {
+                const heightCalc = ((Math.sin(i * seed) * 0.5 + 0.5) * 85) + (i % 3) * 10;
+                const pseudoRandomHeight = Math.max(15, Math.min(100, heightCalc));
+                return (
+                  <div 
+                    key={`fg-${i}`}
+                    className="flex-1 rounded-full bg-blue-500 transition-none"
+                    style={{ height: `${pseudoRandomHeight}%` }}
+                  />
+                );
+              });
+            }, [audioUrl])}
+          </div>
+
           {/* Seek bar handler */}
-          <div className="absolute top-0 bottom-0 w-0.5 bg-blue-600 z-10 transition-all" style={{ left: `${progress}%` }}>
+          <div className="absolute top-0 bottom-0 w-0.5 bg-blue-600 z-10" style={{ left: `${progress}%` }}>
             <div className="w-2 h-2 rounded-full bg-blue-600 -ml-[3px] -mt-[1px]" />
           </div>
         </div>
@@ -87,8 +161,18 @@ export function AudioPlayer({
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-gray-400">
             <Volume2 size={18} />
-            <div className="w-20 h-1 bg-gray-200 rounded-full overflow-hidden">
-              <div className="w-[70%] h-full bg-gray-400 rounded-full" />
+            <div 
+              className="w-20 h-1 bg-gray-200 rounded-full overflow-hidden cursor-pointer"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const newVol = (e.clientX - rect.left) / rect.width;
+                setVolume(Math.max(0, Math.min(1, newVol)));
+              }}
+            >
+              <div 
+                className="h-full bg-gray-400 rounded-full transition-all" 
+                style={{ width: `${volume * 100}%` }}
+              />
             </div>
           </div>
           <Button variant="ghost" size="icon" className="text-gray-400">

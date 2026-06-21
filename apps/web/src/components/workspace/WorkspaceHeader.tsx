@@ -1,13 +1,7 @@
 import React from 'react';
-import { 
-  ChevronRight, 
-  RotateCcw, 
-  Edit3, 
-  Download,
-  Upload
-} from 'lucide-react';
+import { useRouter } from 'next/router';
+import { ChevronRight, Edit3 } from 'lucide-react';
 import { Button, Badge } from '@voiceguard/ui';
-import { UploadCallModal } from './UploadCallModal';
 
 interface WorkspaceHeaderProps {
   callId: string;
@@ -15,10 +9,12 @@ interface WorkspaceHeaderProps {
   group: string;
   duration: string;
   timestamp: string;
+  onEditChecklist?: () => void;
 }
 
-export function WorkspaceHeader({ callId, agentName, group, duration, timestamp }: WorkspaceHeaderProps) {
-  const [showUpload, setShowUpload] = React.useState(false);
+export function WorkspaceHeader({ callId, agentName, group, duration, timestamp, onEditChecklist }: WorkspaceHeaderProps) {
+  const router = useRouter();
+  const displayTime = timestamp.includes('Invalid') ? 'Just now' : timestamp;
 
   return (
     <div className="flex items-center justify-between">
@@ -36,36 +32,24 @@ export function WorkspaceHeader({ callId, agentName, group, duration, timestamp 
             <span className="w-1 h-1 rounded-full bg-gray-300" />
             <span>{group}</span>
             <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <span>{duration} duration</span>
+            <span>{duration}</span>
             <span className="w-1 h-1 rounded-full bg-gray-300" />
-            <span>{timestamp}</span>
+            <span>{displayTime}</span>
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <Button 
-          variant="primary" 
-          size="sm" 
-          className="gap-2 text-xs h-9 shadow-md shadow-blue-100"
-          onClick={() => setShowUpload(true)}
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-xs h-9"
+          onClick={() => router.push('/compliance')}
         >
-          <Upload size={14} />
-          Upload Call
-        </Button>
-        <Button variant="outline" size="sm" className="gap-2 text-xs h-9">
           <Edit3 size={14} />
-          Edit checklist
-        </Button>
-        <Button variant="outline" size="icon" className="h-9 w-9">
-          <RotateCcw size={16} />
-        </Button>
-        <Button variant="outline" size="icon" className="h-9 w-9">
-          <Download size={16} />
+          Manage Criteria
         </Button>
       </div>
-
-      {showUpload && <UploadCallModal onClose={() => setShowUpload(false)} />}
     </div>
   );
 }

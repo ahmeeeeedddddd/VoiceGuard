@@ -48,4 +48,10 @@ export class WorkspaceController {
   ) {
     return this.workspaceService.submitAudit(id, body.auditorName);
   }
+
+  @Post('workspace/:id/delete') // Using POST for easier testing if DELETE is blocked
+  @Roles(Role.ADMIN, Role.AUDITOR)
+  async deleteCall(@Param('id') id: string) {
+    return this.workspaceService.deleteCall(id);
+  }
 }

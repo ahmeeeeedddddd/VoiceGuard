@@ -11,9 +11,15 @@ import { CallRecordEntity } from './database/call-record.entity';
 import { ChecklistRuleEntity } from './database/checklist-rule.entity';
 import { UserEntity } from './database/user.entity';
 import { UsersModule } from './users/users.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',

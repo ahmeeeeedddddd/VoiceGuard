@@ -1,54 +1,91 @@
 import React from 'react';
 import { MessageSquare, Download, CheckCircle2, Plus, StickyNote } from 'lucide-react';
 import { Card, Badge, Button } from '@voiceguard/ui';
+import { TranscriptPayload, TranscriptWord } from '@voiceguard/shared';
 
-const MOCK_TURNS = [
-  {
-    time: '00:00',
-    speaker: 'AGENT',
-    text: 'Thank you for calling Nimbus Telecom, this call is recorded for quality and compliance.',
-    ruleMatched: true,
-  },
-  {
-    time: '00:06',
-    speaker: 'AGENT',
-    text: 'My name is Alex. May I please have your account number?',
-    ruleMatched: false,
-  },
-  {
-    time: '00:11',
-    speaker: 'CUSTOMER',
-    text: "Sure, it's 8842-1190-AC.",
-    ruleMatched: false,
-  },
-  {
-    time: '00:15',
-    speaker: 'AGENT',
-    text: "Thanks. For your security, I'll verify two details before we continue.",
-    ruleMatched: true,
-  },
-  {
-    time: '00:22',
-    speaker: 'CUSTOMER',
-    text: 'Okay, go ahead.',
-    ruleMatched: false,
-  },
-  {
-    time: '00:24',
-    speaker: 'AGENT',
-    text: 'Can you confirm the last four of the card on file and your billing zip?',
-    ruleMatched: false,
-  },
-];
+interface turn {
+  time: string;
+  speaker: 'AGENT' | 'CUSTOMER';
+  text: string;
+  startMs: number;
+  endMs: number;
+}
 
-export function TranscriptView({ currentTime, onSeek }: { currentTime: number; onSeek: (t: number) => void }) {
+export function TranscriptView({ 
+  currentTime, 
+  onSeek, 
+  transcript 
+}: { 
+  currentTime: number; 
+  onSeek: (t: number) => void;
+  transcript?: TranscriptPayload;
+}) {
   const [notes, setNotes] = React.useState<Record<number, string>>({});
   const [activeNoteIdx, setActiveNoteIdx] = React.useState<number | null>(null);
 
-  const parseTime = (timeStr: string) => {
-    const [m, s] = timeStr.split(':').map(Number);
-    return m * 60 + s;
+  const formatMs = (ms: number) => {
+    const totalSecs = Math.floor(ms / 1000);
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
+
+  // Group words into conversational turns
+  const turns = React.useMemo(() => {
+    if (!transcript || !transcript.words || transcript.words.length === 0) return [];
+    
+    const result: turn[] = [];
+    let currentTurn: { speaker: number; words: string[]; startMs: number; endMs: number } | null = null;
+
+    const words = (transcript.words as TranscriptWord[]) || [];
+    for (const w of words) {
+      const speakerId = w.speaker ?? 0;
+      
+      if (!currentTurn || currentTurn.speaker !== speakerId) {
+        if (currentTurn) {
+          result.push({
+            time: formatMs(currentTurn.startMs),
+            speaker: (transcript.speakerLabels?.[currentTurn.speaker] as any) || 'AGENT',
+            text: currentTurn.words.join(' '),
+            startMs: currentTurn.startMs,
+            endMs: currentTurn.endMs,
+          });
+        }
+        currentTurn = { 
+          speaker: speakerId, 
+          words: [w.word], 
+          startMs: w.startMs, 
+          endMs: w.endMs 
+        };
+      } else {
+        currentTurn.words.push(w.word);
+        currentTurn.endMs = w.endMs;
+      }
+    }
+
+    if (currentTurn) {
+      result.push({
+        time: formatMs(currentTurn.startMs),
+        speaker: (transcript.speakerLabels?.[currentTurn.speaker] as any) || 'AGENT',
+        text: currentTurn.words.join(' '),
+        startMs: currentTurn.startMs,
+        endMs: currentTurn.endMs,
+      });
+    }
+
+    return result;
+  }, [transcript]);
+
+  if (!transcript) {
+    return (
+      <Card className="h-full flex items-center justify-center border-gray-100 shadow-sm bg-white/80 grayscale opacity-50">
+        <div className="text-center space-y-2">
+          <MessageSquare className="mx-auto text-gray-300" size={32} />
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No transcript available</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="h-full flex flex-col border-gray-100 shadow-sm bg-white/80 backdrop-blur-sm overflow-hidden">
@@ -58,8 +95,8 @@ export function TranscriptView({ currentTime, onSeek }: { currentTime: number; o
             <MessageSquare size={16} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-gray-900 leading-none">Live Transcript</h3>
-            <p className="text-[10px] text-gray-400 font-medium">18 turns • auto-scroll synced to 00:45</p>
+            <h3 className="text-sm font-bold text-gray-900 leading-none">Call Transcript</h3>
+            <p className="text-[10px] text-gray-400 font-medium">{turns.length} turns • {transcript.language || 'English'}</p>
           </div>
         </div>
         <Button variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-bold uppercase tracking-wider">
@@ -69,18 +106,16 @@ export function TranscriptView({ currentTime, onSeek }: { currentTime: number; o
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-1 relative">
-        {/* Grid lines overlay to match design blueprint feel */}
         <div className="absolute inset-0 blueprint-bg pointer-events-none opacity-50" />
         
-        {MOCK_TURNS.map((turn, i) => {
-          const turnTime = parseTime(turn.time);
-          const isActive = currentTime >= turnTime && (i === MOCK_TURNS.length - 1 || currentTime < parseTime(MOCK_TURNS[i+1].time));
+        {turns.map((turn, i) => {
+          const isActive = (currentTime * 1000) >= turn.startMs && (currentTime * 1000) <= turn.endMs;
 
           return (
             <div 
               key={i} 
               className={`flex gap-4 p-3 rounded-lg transition-colors relative z-0 cursor-pointer ${isActive ? 'bg-blue-50/50' : 'hover:bg-gray-50/50'}`}
-              onClick={() => onSeek(turnTime)}
+              onClick={() => onSeek(turn.startMs / 1000)}
             >
             <div className="w-10 text-[10px] font-mono text-gray-300 mt-1">{turn.time}</div>
             <div className="flex-1 space-y-1">
@@ -88,12 +123,6 @@ export function TranscriptView({ currentTime, onSeek }: { currentTime: number; o
                 <span className={`text-[10px] font-bold tracking-widest ${turn.speaker === 'AGENT' ? 'text-blue-500' : 'text-orange-500'}`}>
                   {turn.speaker}
                 </span>
-                {turn.ruleMatched && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-50 text-[9px] font-bold text-green-600 border border-green-100 uppercase tracking-tighter">
-                    <span className="w-1 h-1 rounded-full bg-green-500" />
-                    Rule Matched
-                  </div>
-                )}
               </div>
               <p className={`text-sm leading-relaxed ${turn.speaker === 'CUSTOMER' ? 'text-gray-500' : 'text-gray-900 font-medium'}`}>
                 {turn.text}

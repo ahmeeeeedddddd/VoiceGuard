@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RiskHeatmap } from '@/components/dashboard/RiskHeatmap';
+import { ManualUpload } from '@/components/dashboard/ManualUpload';
 import { Card, Badge, Button } from '@voiceguard/ui';
 import { 
   PlayCircle, 
@@ -50,6 +51,9 @@ export default function Home() {
             <MetricCard label="CRITICAL VIOLATIONS" value="27" trend="-18%" trendUp={false} sub="vs 24h" icon={<AlertTriangle size={14} />} />
             <MetricCard label="AVG AUDIT LATENCY" value="412 ms" trend="-22ms" trendUp={false} sub="vs 24h" icon={<TrendingUpIcon />} />
           </div>
+
+          {/* Manual Upload Section */}
+          <ManualUpload />
 
           {/* Heatmap Section */}
           <RiskHeatmap />

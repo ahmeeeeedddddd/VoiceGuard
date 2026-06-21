@@ -12,12 +12,15 @@ import { RealtimeModule } from '../realtime/realtime.module';
 import { ManualUploadController } from './controllers/manual-upload.controller';
 import { ManualUploadService } from './services/manual-upload.service';
 
+import { AuditModule } from '../audit/audit.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([CallRecordEntity]),
     BullModule.registerQueue({ name: 'transcription' }),
     ScheduleModule.forRoot(),
     RealtimeModule,
+    AuditModule,
   ],
   controllers: [WebhookController, ManualUploadController],
   providers: [

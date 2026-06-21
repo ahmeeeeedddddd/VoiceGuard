@@ -5,6 +5,12 @@ export class ChecklistRuleEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ default: 'Unnamed Rule' })
+  name: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
   @Column()
   requiredPhrase: string;
 
