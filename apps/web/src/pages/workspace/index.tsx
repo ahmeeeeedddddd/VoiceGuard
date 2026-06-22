@@ -3,11 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Trash2 } from 'lucide-react';
-
-const DEV_HEADERS: Record<string, string> = {
-  'Content-Type': 'application/json',
-  'x-mock-role': 'ADMIN',
-};
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CallRecord {
   id: string;
@@ -19,26 +15,38 @@ interface CallRecord {
 }
 
 export default function WorkspaceIndex() {
+  const { token } = useAuth();
   const [calls, setCalls] = useState<CallRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCalls = () => {
-    fetch('http://localhost:3001/audit/calls', { headers: DEV_HEADERS })
+    if (!token) return;
+    fetch('http://localhost:3001/audit/calls', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
       .then(res => res.ok ? res.json() : [])
       .then(data => { setCalls(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchCalls();
-  }, []);
+    if (token) {
+      fetchCalls();
+    }
+  }, [token]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this ingestion?')) return;
     try {
       const res = await fetch(`http://localhost:3001/audit/workspace/${id}/delete`, {
         method: 'POST',
-        headers: DEV_HEADERS,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       if (res.ok) {
         setCalls(prev => prev.filter(c => c.id !== id));

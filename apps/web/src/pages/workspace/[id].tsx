@@ -7,14 +7,10 @@ import { TranscriptView } from '@/components/workspace/TranscriptView';
 import { ChecklistView } from '@/components/workspace/ChecklistView';
 
 import { useRouter } from 'next/router';
-
-// Mock headers to bypass the RolesGuard in dev
-const DEV_HEADERS: Record<string, string> = {
-  'Content-Type': 'application/json',
-  'x-mock-role': 'ADMIN',
-};
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function WorkspacePage() {
+  const { token } = useAuth();
   const router = useRouter();
   const { id } = router.query;
   const [currentTime, setCurrentTime] = React.useState(0);
@@ -24,8 +20,13 @@ export default function WorkspacePage() {
   const [isEditingChecklist, setIsEditingChecklist] = React.useState(false);
 
   React.useEffect(() => {
-    if (!id) return;
-    fetch(`http://localhost:3001/audit/workspace/${id}`, { headers: DEV_HEADERS })
+    if (!id || !token) return;
+    fetch(`http://localhost:3001/audit/workspace/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -38,7 +39,7 @@ export default function WorkspacePage() {
         console.error('Failed to fetch call', err);
         setError(err.message);
       });
-  }, [id]);
+  }, [id, token]);
 
   if (error) return <AppLayout><div className="p-8 text-red-500">Error loading call: {error}</div></AppLayout>;
   if (!callData) return <AppLayout><div className="p-8 text-gray-400">Loading...</div></AppLayout>;

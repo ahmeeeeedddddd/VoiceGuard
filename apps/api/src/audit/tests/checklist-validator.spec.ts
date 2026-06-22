@@ -29,18 +29,21 @@ describe('ChecklistValidatorService', () => {
   const rules: ChecklistRule[] = [
     {
       id: 'rule-001',
+      name: 'Recording Consent',
       requiredPhrase: 'I am recording this call for quality assurance',
       points: 30,
       isCriticalFail: true,
     },
     {
       id: 'rule-002',
+      name: 'Cancellation Policy',
       requiredPhrase: 'you can cancel at any time',
       points: 20,
       isCriticalFail: false,
     },
     {
       id: 'rule-003',
+      name: 'Question Check',
       requiredPhrase: 'do you have any questions',
       points: 15,
       isCriticalFail: false,

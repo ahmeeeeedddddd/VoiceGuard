@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { WorkspaceService } from '../services/workspace.service';
 import { RolesGuard } from '../../auth/roles.guard';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { Role } from '@voiceguard/shared';
 
 @Controller('audit')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class WorkspaceController {
   constructor(
     private readonly workspaceService: WorkspaceService,
@@ -49,8 +50,8 @@ export class WorkspaceController {
     return this.workspaceService.submitAudit(id, body.auditorName);
   }
 
-  @Post('workspace/:id/delete') // Using POST for easier testing if DELETE is blocked
-  @Roles(Role.ADMIN, Role.AUDITOR)
+  @Post('workspace/:id/delete')
+  @Roles(Role.ADMIN)
   async deleteCall(@Param('id') id: string) {
     return this.workspaceService.deleteCall(id);
   }
