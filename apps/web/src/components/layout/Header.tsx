@@ -1,8 +1,15 @@
 import React from 'react';
-import { Search, Bell, User } from 'lucide-react';
+import { Search, Bell, LogOut } from 'lucide-react';
 import { Button } from '@voiceguard/ui';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function Header() {
+  const { user, logout } = useAuth();
+  
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <header className="h-16 border-b border-gray-100 flex items-center justify-between px-8 bg-white/80 backdrop-blur-sm sticky top-0 z-10 print:hidden">
       <div className="flex items-center relative w-96 max-w-full">
@@ -27,12 +34,19 @@ export function Header() {
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-sm font-semibold text-gray-900 leading-none">E. Markova</p>
-            <p className="text-[10px] text-gray-400 font-medium">QA Lead</p>
+            <p className="text-sm font-semibold text-gray-900 leading-none">{user?.name || 'User'}</p>
+            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">{user?.role || 'Guest'}</p>
           </div>
           <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm border-2 border-white shadow-sm ring-1 ring-blue-50">
-            EM
+            {user ? getInitials(user.name) : 'U'}
           </div>
+          <button 
+            onClick={logout}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Logout"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>

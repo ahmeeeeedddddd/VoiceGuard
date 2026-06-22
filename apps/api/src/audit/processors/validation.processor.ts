@@ -4,8 +4,8 @@ import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CallRecordEntity } from '../../database/call-record.entity';
-import { ChecklistValidatorService } from '../services/checklist-validator.service';
 import { ChecklistRuleService } from '../services/checklist-rule.service';
+import { AuditAiService } from '../services/audit-ai.service';
 import { AlertBroadcasterService } from '../../realtime/services/alert-broadcaster.service';
 import { AuditStatus, CallAlertEvent } from '@voiceguard/shared';
 
@@ -16,8 +16,8 @@ export class ValidationProcessor {
   constructor(
     @InjectRepository(CallRecordEntity)
     private readonly callRecordRepo: Repository<CallRecordEntity>,
-    private readonly checklistValidator: ChecklistValidatorService,
     private readonly checklistRuleService: ChecklistRuleService,
+    private readonly auditAiService: AuditAiService,
     private readonly alertBroadcaster: AlertBroadcasterService,
   ) {}
 
@@ -33,10 +33,24 @@ export class ValidationProcessor {
     }
 
     const rules = await this.checklistRuleService.getActiveRules();
-    const results = this.checklistValidator.validate(record.transcript, rules);
-    const riskLevel = this.checklistValidator.computeRiskLevel(results, rules);
+    const results = await this.auditAiService.auditTranscription(record.transcript.fullText, rules);
+    
+    // Simple risk level logic based on AI findings
+    const failedResults = results.filter((r) => r.status === 'FAILED');
+    const hasFailures = failedResults.length > 0;
+    
+    // Any critical-fail rule failing → immediate HIGH
+    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+    const hasCriticalFail = failedResults.some((r) => {
+      const rule = rules.find((rule) => rule.id === r.ruleId);
+      return rule?.isCriticalFail;
+    });
 
-    const hasFailures = results.some((r) => r.status === 'FAILED');
+    if (hasCriticalFail) {
+      riskLevel = 'HIGH';
+    } else if (failedResults.length > (rules.length * 0.3)) {
+      riskLevel = 'MEDIUM';
+    }
 
     record.riskLevel = riskLevel;
     record.status = hasFailures ? AuditStatus.NEEDS_REVIEW : AuditStatus.VERIFIED;

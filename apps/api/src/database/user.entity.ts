@@ -15,6 +15,9 @@ export class UserEntity {
   @Column({ type: 'enum', enum: Role, default: Role.AUDITOR })
   role: Role;
 
+  @Column({ select: false })
+  password: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

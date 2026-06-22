@@ -7,3 +7,5 @@ postgres-data
 .next
 *.log
 *.tsbuildinfo
+apps/api/scripts/test_*.js
+apps/api/scripts/test_ai_auditor.ts

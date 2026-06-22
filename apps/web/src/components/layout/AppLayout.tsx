@@ -1,8 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user && !['/login', '/register'].includes(router.pathname)) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (['/login', '/register'].includes(router.pathname)) {
+    return <>{children}</>;
+  }
+
+  if (loading || (!user && router.pathname !== '/login')) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen print:h-auto bg-gray-50/30 overflow-hidden print:overflow-visible font-sans antialiased text-gray-900">
       <Sidebar />

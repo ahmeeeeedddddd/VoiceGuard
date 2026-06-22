@@ -18,15 +18,16 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    // For demonstration, we use a custom header to simulate the logged-in user's role.
-    const userRole = request.headers['x-mock-role'] as Role;
+    const user = request.user;
 
-    if (!userRole) {
-      throw new ForbiddenException('No role provided in x-mock-role header');
+    if (!user || !user.role) {
+      throw new ForbiddenException('No user or role found in request');
     }
 
-    if (!requiredRoles.includes(userRole)) {
-      throw new ForbiddenException(`Access denied for role ${userRole}`);
+    const { role } = user;
+
+    if (!requiredRoles.includes(role)) {
+      throw new ForbiddenException(`Access denied for role ${role}`);
     }
 
     return true;

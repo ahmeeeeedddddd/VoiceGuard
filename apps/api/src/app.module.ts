@@ -11,6 +11,8 @@ import { CallRecordEntity } from './database/call-record.entity';
 import { ChecklistRuleEntity } from './database/checklist-rule.entity';
 import { UserEntity } from './database/user.entity';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { LogsModule } from './logs/logs.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -48,6 +50,8 @@ import { join } from 'path';
     AuditModule,
     AnalyticsModule,
     UsersModule,
+    AuthModule,
+    LogsModule,
   ],
 })
 export class AppModule {}

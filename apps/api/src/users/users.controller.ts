@@ -2,10 +2,11 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { UsersService } from './users.service';
 import { Role } from '@voiceguard/shared';
 import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 
 @Controller('users')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -16,8 +17,8 @@ export class UsersController {
   }
 
   @Post()
-  async create(@Body() body: { name: string; email: string; role: Role }) {
-    return this.usersService.create(body.name, body.email, body.role);
+  async create(@Body() body: { name: string; email: string; role: Role; password?: string }) {
+    return this.usersService.create(body.name, body.email, body.role, body.password);
   }
 
   @Patch(':id/role')

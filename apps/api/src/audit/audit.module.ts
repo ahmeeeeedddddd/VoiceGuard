@@ -14,6 +14,7 @@ import { RealtimeModule } from '../realtime/realtime.module';
 import { WorkspaceController } from './controllers/workspace.controller';
 import { ChecklistRuleController } from './controllers/checklist-rule.controller';
 import { WorkspaceService } from './services/workspace.service';
+import { AuditAiService } from './services/audit-ai.service';
 
 const sttProvider = process.env.STT_PROVIDER === 'whisper'
   ? { provide: STT_PROVIDER_TOKEN, useClass: WhisperProvider }
@@ -34,6 +35,7 @@ const sttProvider = process.env.STT_PROVIDER === 'whisper'
     TranscriptionProcessor,
     ValidationProcessor,
     WorkspaceService,
+    AuditAiService,
   ],
   exports: [WorkspaceService, ChecklistValidatorService, sttProvider],
 })

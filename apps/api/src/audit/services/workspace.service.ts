@@ -1,18 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CallRecordEntity } from '../../database/call-record.entity';
 import { ChecklistRuleService } from './checklist-rule.service';
-import { ChecklistValidatorService } from './checklist-validator.service';
+import { AuditAiService } from './audit-ai.service';
 import { AuditStatus } from '@voiceguard/shared';
 
 @Injectable()
 export class WorkspaceService {
+  private readonly logger = new Logger(WorkspaceService.name);
+
   constructor(
     @InjectRepository(CallRecordEntity)
     private readonly callRepository: Repository<CallRecordEntity>,
     private readonly ruleService: ChecklistRuleService,
-    private readonly validatorService: ChecklistValidatorService,
+    private readonly auditAiService: AuditAiService,
   ) {}
 
   async getAllCalls() {
@@ -23,42 +25,55 @@ export class WorkspaceService {
     const call = await this.callRepository.findOneBy({ id });
     if (!call) throw new NotFoundException('Call not found');
 
+    // Get active rules
     let rules = await this.ruleService.getActiveRules();
     
-    // Automatically seed real DB rules if the database is completely empty
-    if (!rules || rules.length === 0) {
-      console.log('Seeding initial database rules...');
-      await this.ruleService.createRule({ 
-        name: 'Greeting Check',
-        description: 'Did the agent introduce themselves?',
-        requiredPhrase: 'name is', 
-        isCriticalFail: false, 
-        points: 10, 
-        isActive: true, 
-        category: 'Greeting' 
-      });
-      await this.ruleService.createRule({ 
-        name: 'Booking Process',
-        description: 'Did the agent collect the email?',
-        requiredPhrase: 'email', 
-        isCriticalFail: true, 
-        points: 15, 
-        isActive: true, 
-        category: 'Process' 
-      });
-      await this.ruleService.createRule({ 
-        name: 'Closing Check',
-        description: 'Did the agent thank the customer?',
-        requiredPhrase: 'thank', 
-        isCriticalFail: false, 
-        points: 5, 
-        isActive: true, 
-        category: 'Closing' 
-      });
-      
-      // Fetch the newly created database rules
-      rules = await this.ruleService.getActiveRules();
-    }
+    // Rule Sync Helper: Ensure database rules match the latest requirements
+    const syncRule = async (searchName: string, updateData: any) => {
+      const existing = rules.find(r => r.name === searchName || (searchName === 'Contact Verification' && r.name === 'Booking Process'));
+      if (existing) {
+        if (existing.name !== updateData.name || existing.description !== updateData.description) {
+           await this.ruleService.updateRule(existing.id, updateData);
+           this.logger.log(`[SYNC] Updated rule metadata for: ${updateData.name}`);
+        }
+      } else {
+         await this.ruleService.createRule(updateData);
+         this.logger.log(`[SEED] Created missing rule: ${updateData.name}`);
+      }
+    };
+
+    await syncRule('Greeting Check', { 
+      name: 'Greeting Check',
+      description: 'Did the agent introduce themselves?',
+      requiredPhrase: 'name is', 
+      isCriticalFail: false, 
+      points: 10, 
+      isActive: true, 
+      category: 'Greeting' 
+    });
+    
+    await syncRule('Contact Verification', { 
+      name: 'Contact Verification',
+      description: 'Did the agent obtain a valid way to reach the customer (email, phone, etc)?',
+      requiredPhrase: 'contact method', 
+      isCriticalFail: true, 
+      points: 15, 
+      isActive: true, 
+      category: 'Process' 
+    });
+
+    await syncRule('Closing Check', { 
+      name: 'Closing Check',
+      description: 'Did the agent thank the customer?',
+      requiredPhrase: 'thank', 
+      isCriticalFail: false, 
+      points: 5, 
+      isActive: true, 
+      category: 'Closing' 
+    });
+
+    // Refresh rules after sync to get updated IDs/metadata
+    rules = await this.ruleService.getActiveRules();
 
     // Graceful fallback if transcription failed (e.g., missing Deepgram API key)
     if (!call.transcript) {
@@ -90,7 +105,7 @@ export class WorkspaceService {
       };
     }
 
-    const automatedResults = call.transcript ? this.validatorService.validate(call.transcript, rules) : [];
+    const automatedResults = call.transcript ? await this.auditAiService.auditTranscription(call.transcript.fullText, rules) : [];
 
     return { call, rules, automatedResults };
   }
@@ -122,7 +137,7 @@ export class WorkspaceService {
     if (!call) throw new NotFoundException('Call not found');
 
     const rules = await this.ruleService.getActiveRules();
-    const automatedResults = call.transcript ? this.validatorService.validate(call.transcript, rules) : [];
+    const automatedResults = call.transcript ? await this.auditAiService.auditTranscription(call.transcript.fullText, rules) : [];
 
     let pointsEarned = 0;
     let totalPoints = 0;

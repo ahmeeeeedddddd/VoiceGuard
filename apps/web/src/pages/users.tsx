@@ -1,27 +1,37 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import { Role, User } from '@voiceguard/shared';
+import { Role, User as UserType } from '@voiceguard/shared';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button, Card } from '@voiceguard/ui';
+import { UserPlus, Trash2, Key } from 'lucide-react';
 
 export default function UsersManagement() {
-  const [users, setUsers] = useState<User[]>([]);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>(Role.AUDITOR);
   
-  // Since we don't have real auth, we will mock the role to bypass our backend guard
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-mock-role': Role.ADMIN, // Mock as admin to manage users
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('vg_token') : null;
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
   };
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch('http://localhost:3001/users', { headers });
+      const res = await fetch('http://localhost:3001/users', { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
+      } else {
+        const errorData = await res.json();
+        console.error('Failed to fetch users', errorData);
       }
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -39,16 +49,23 @@ export default function UsersManagement() {
     try {
       const res = await fetch('http://localhost:3001/users', {
         method: 'POST',
-        headers,
-        body: JSON.stringify({ name, email, role }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name, email, role, password }),
       });
       if (res.ok) {
         setName('');
         setEmail('');
+        setPassword('');
         fetchUsers();
+        alert('User added successfully');
+      } else {
+        const errorData = await res.json();
+        console.error('Failed to create user', errorData);
+        alert(`Failed to create user: ${errorData.message || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Failed to create user', err);
+      alert('Failed to connect to the server');
     }
   };
 
@@ -56,7 +73,7 @@ export default function UsersManagement() {
     try {
       const res = await fetch(`http://localhost:3001/users/${id}/role`, {
         method: 'PATCH',
-        headers,
+        headers: getAuthHeaders(),
         body: JSON.stringify({ role: newRole }),
       });
       if (res.ok) {
@@ -68,11 +85,15 @@ export default function UsersManagement() {
   };
 
   const handleDelete = async (id: string) => {
+    if (id === currentUser?.id) {
+      alert('You cannot delete your own account.');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
       const res = await fetch(`http://localhost:3001/users/${id}`, {
         method: 'DELETE',
-        headers,
+        headers: getAuthHeaders(),
       });
       if (res.ok) {
         fetchUsers();
@@ -96,56 +117,78 @@ export default function UsersManagement() {
         </div>
 
         {/* Create User Form */}
-        <div className="bg-white p-6 shadow sm:rounded-lg">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Add New User</h2>
-          <form onSubmit={handleCreate} className="flex gap-4 items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">Name</label>
-              <input required type="text" value={name} onChange={e => setName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2" />
+        <Card className="p-6 shadow-sm border-gray-100">
+          <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <UserPlus size={20} className="text-blue-600" />
+            Add New User
+          </h2>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-widest">Full Name</label>
+              <input required type="text" value={name} onChange={e => setName(e.target.value)} className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="Jane Smith" />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2" />
+            <div className="space-y-1.5">
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-widest">Email Address</label>
+              <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="jane@example.com" />
             </div>
-            <div className="w-48">
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <select value={role} onChange={e => setRole(e.target.value as Role)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2">
-                <option value={Role.AUDITOR}>Auditor</option>
-                <option value={Role.COMPLIANCE_OFFICER}>Compliance Officer</option>
-                <option value={Role.ADMIN}>Admin</option>
-              </select>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-widest">Initial Password</label>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="block w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all" placeholder="••••••••" />
+              </div>
             </div>
-            <button type="submit" className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-              Add User
-            </button>
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-1.5">
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-widest">Access Role</label>
+                <select value={role} onChange={e => setRole(e.target.value as Role)} className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                  <option value={Role.AUDITOR}>Auditor</option>
+                  <option value={Role.COMPLIANCE_OFFICER}>Compliance Officer</option>
+                  <option value={Role.ADMIN}>Admin</option>
+                </select>
+              </div>
+              <Button type="submit" className="h-[42px] px-6 bg-blue-600 hover:bg-blue-700 font-bold uppercase tracking-widest text-xs">
+                Add
+              </Button>
+            </div>
           </form>
-        </div>
+        </Card>
 
         {/* Users Table */}
-        <div className="bg-white shadow sm:rounded-lg overflow-hidden">
+        <Card className="shadow-sm border-gray-100 overflow-hidden">
           {loading ? (
-            <div className="p-4 text-gray-500">Loading users...</div>
+            <div className="p-12 flex flex-col items-center justify-center text-gray-400 gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="text-sm font-medium tracking-wide">Fetching team registry...</span>
+            </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name / Email</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Team Member</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Permissions</th>
+                  <th scope="col" className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-50">
                 {users.map(user => (
-                  <tr key={user.id}>
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs uppercase">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                          <div className="text-xs text-gray-500 font-medium">{user.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
                         value={user.role}
                         onChange={(e) => handleUpdateRole(user.id, e.target.value as Role)}
-                        className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-1"
+                        className="bg-transparent border-none text-xs font-bold text-blue-600 focus:ring-0 cursor-pointer p-0 hover:underline"
                       >
                         <option value={Role.AUDITOR}>Auditor</option>
                         <option value={Role.COMPLIANCE_OFFICER}>Compliance Officer</option>
@@ -153,19 +196,27 @@ export default function UsersManagement() {
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button onClick={() => handleDelete(user.id)} className="text-red-600 hover:text-red-900">Delete</button>
+                      <button 
+                        onClick={() => handleDelete(user.id)} 
+                        className={`p-2 rounded-lg transition-colors ${user.id === currentUser?.id ? 'text-gray-200 cursor-not-allowed' : 'text-gray-400 hover:text-red-600 hover:bg-red-50'}`}
+                        disabled={user.id === currentUser?.id}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-6 py-4 text-center text-sm text-gray-500">No users found.</td>
+                    <td colSpan={3} className="px-6 py-12 text-center">
+                      <p className="text-sm text-gray-400 font-medium">No system users identified.</p>
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
           )}
-        </div>
+        </Card>
         </div>
       </div>
     </AppLayout>

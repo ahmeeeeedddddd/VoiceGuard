@@ -66,6 +66,7 @@ export default function WorkspacePage() {
       name: rule.name,
       description: rule.description || '',
       status: finalStatus,
+      aiReasoning: autoResult?.aiReasoning,
     };
   });
 

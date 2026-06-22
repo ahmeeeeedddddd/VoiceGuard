@@ -39,6 +39,8 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
   };
 
   const passedCount = checklist.filter(c => localOverrides[c.id] === 'PASS' || (c.status === 'PASS' && localOverrides[c.id] !== 'FAIL')).length;
+  const failedCount = checklist.filter(c => localOverrides[c.id] === 'FAIL' || (c.status === 'FAIL' && localOverrides[c.id] !== 'PASS')).length;
+  const pendingCount = checklist.length - passedCount - failedCount;
 
   const handleReportSubmit = async () => {
     try {
@@ -65,7 +67,7 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
           </div>
           <div>
             <h3 className="text-sm font-bold text-gray-900 leading-none">Acceptance Criteria</h3>
-            <p className="text-[10px] text-gray-400 font-medium">{passedCount}/{checklist.length} passed • 0 failed • {checklist.length - passedCount} pending</p>
+            <p className="text-[10px] text-gray-400 font-medium">{passedCount}/{checklist.length} passed • {failedCount} failed • {pendingCount} pending</p>
           </div>
         </div>
         <div className="flex gap-1">
@@ -109,6 +111,14 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
                       <p className="text-xs font-bold text-gray-900">{item.name || item.text}</p>
                     </div>
                     <p className="text-[10px] text-gray-400 font-medium">{item.description || item.info}</p>
+                    {item.aiReasoning && (
+                      <div className="mt-1 flex items-start gap-1.5 opacity-80">
+                        <MessageSquare size={10} className="text-blue-400 shrink-0 mt-0.5" />
+                        <p className="text-[9px] text-blue-600/70 font-mono italic leading-tight">
+                          AI: {item.aiReasoning}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
