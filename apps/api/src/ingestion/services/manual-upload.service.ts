@@ -17,7 +17,7 @@ export class ManualUploadService {
     private readonly sttProvider: ISttProvider,
   ) {}
 
-  async handleUpload(file: Express.Multer.File) {
+  async handleUpload(file: Express.Multer.File, sourceName?: string) {
     if (!file.mimetype.includes('audio/mpeg') && !file.mimetype.includes('audio/mp3')) {
       throw new BadRequestException('Only MP3 files are supported');
     }
@@ -28,7 +28,7 @@ export class ManualUploadService {
       id: uuidv4(),
       externalId: `MANUAL-${Date.now()}`,
       audioUrl,
-      source: 'MANUAL_UPLOAD',
+      source: (sourceName as any) || 'MANUAL_UPLOAD',
       status: AuditStatus.PROCESSING,
     });
 

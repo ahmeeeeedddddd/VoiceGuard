@@ -51,6 +51,9 @@ export class CallRecordEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   auditedBy?: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  aiResults?: any; // Stores Array<{ ruleId: string; status: 'PASSED' | 'FAILED'; reason: string }>
+
   @Column({ type: 'boolean', default: false })
   isAutomaticFail?: boolean;
 }

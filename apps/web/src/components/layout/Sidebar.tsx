@@ -9,13 +9,15 @@ import {
   Settings,
   FileText,
   Users,
-  Activity
+  Activity,
+  Database
 } from 'lucide-react';
 import { cn } from '@voiceguard/ui';
 
 const NAV_ITEMS = [
   { label: 'Overview', icon: LayoutDashboard, href: '/' },
   { label: 'Audit Workspace', icon: Mic2, href: '/workspace' },
+  { label: 'All Recordings', icon: Database, href: '/recordings' },
   { label: 'Compliance', icon: ShieldCheck, href: '/compliance' },
   { label: 'Analytics', icon: BarChart3, href: '/analytics' },
   { label: 'Reports', icon: FileText, href: '/reports' },

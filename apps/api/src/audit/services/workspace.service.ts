@@ -105,7 +105,19 @@ export class WorkspaceService {
       };
     }
 
+    // PERSISTENCE: Check if we already have saved AI results to avoid redundant runs
+    if (call.aiResults && Array.isArray(call.aiResults) && call.aiResults.length > 0) {
+      return { call, rules, automatedResults: call.aiResults };
+    }
+
     const automatedResults = call.transcript ? await this.auditAiService.auditTranscription(call.transcript.fullText, rules) : [];
+
+    // Save results if they were successfully generated (not fallback PENDING)
+    if (automatedResults.length > 0 && automatedResults[0].status !== 'PENDING') {
+      call.aiResults = automatedResults;
+      await this.callRepository.save(call);
+      this.logger.log(`[PERSISTENCE] Saved AI results for call: ${call.externalId}`);
+    }
 
     return { call, rules, automatedResults };
   }

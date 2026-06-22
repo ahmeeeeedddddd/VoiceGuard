@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ManualUploadService } from '../services/manual-upload.service';
 
@@ -19,10 +19,10 @@ export class ManualUploadController {
       },
     }),
   }))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Body('source') source?: string) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return this.uploadService.handleUpload(file);
+    return this.uploadService.handleUpload(file, source);
   }
 }
