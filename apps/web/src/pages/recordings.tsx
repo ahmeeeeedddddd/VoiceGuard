@@ -13,6 +13,7 @@ interface CallRecord {
   source: string;
   riskLevel?: string;
   createdAt: string;
+  aiResults?: any;
 }
 
 export default function AllRecordingsIndex() {
@@ -36,6 +37,8 @@ export default function AllRecordingsIndex() {
   useEffect(() => {
     if (token) {
       fetchCalls();
+      const interval = setInterval(fetchCalls, 5000);
+      return () => clearInterval(interval);
     }
   }, [token]);
 
@@ -121,9 +124,15 @@ export default function AllRecordingsIndex() {
                       >
                         <Trash2 size={16} />
                       </button>
-                      <Link href={`/workspace/${call.id}`} className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase rounded shadow-sm hover:bg-blue-700 transition-all tracking-wider">
-                        Audit
-                      </Link>
+                      {call.aiResults && call.aiResults.length > 0 ? (
+                        <Link href={`/workspace/${call.id}`} className="px-3 py-1.5 bg-gray-500 text-white text-[10px] font-black uppercase rounded shadow-sm hover:bg-gray-600 transition-all tracking-wider">
+                          Already Audited
+                        </Link>
+                      ) : (
+                        <Link href={`/workspace/${call.id}`} className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase rounded shadow-sm hover:bg-blue-700 transition-all tracking-wider">
+                          Audit
+                        </Link>
+                      )}
                     </div>
                   </li>
                 ))}

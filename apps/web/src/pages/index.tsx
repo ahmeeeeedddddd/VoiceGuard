@@ -18,22 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-const MOCK_ALERTS = [
-  { id: '1', time: '00:12', agent: 'agent-31', msg: 'PCI data spoken without redaction prompt', severity: 'CRITICAL', code: 'C-04A2' },
-  { id: '2', time: '00:34', agent: 'agent-07', msg: 'Disclosure script skipped (Section 3.2)', severity: 'WARNING', code: 'C-04A1' },
-  { id: '3', time: '01:02', agent: 'agent-12', msg: 'Sentiment dropped below -0.4 for 18s', severity: 'INFO', code: 'C-049F' },
-  { id: '4', time: '01:48', agent: 'agent-19', msg: 'Resolution confirmed · CSAT 5/5', severity: 'SUCCESS', code: 'C-049D' },
-  { id: '5', time: '02:11', agent: 'agent-22', msg: 'Hold time exceeded 90s without notice', severity: 'WARNING', code: 'C-049A' },
-  { id: '6', time: '02:40', agent: 'agent-04', msg: 'Profanity detected in agent channel', severity: 'CRITICAL', code: 'C-0497' },
-];
 
-const CLUSTERS = [
-  { name: 'Billing EN-US', pass: 94, warn: 5, fail: 1 },
-  { name: 'Retention EN-US', pass: 81, warn: 14, fail: 5 },
-  { name: 'Tech Support EN-GB', pass: 88, warn: 9, fail: 3 },
-  { name: 'Onboarding ES-MX', pass: 91, warn: 7, fail: 2 },
-  { name: 'Collections EN-US', pass: 73, warn: 19, fail: 8 },
-];
 
 export default function Home() {
   const [calls, setCalls] = useState<any[]>([]);
@@ -41,13 +26,27 @@ export default function Home() {
 
   useEffect(() => {
     if (!token) return;
-    fetch('http://localhost:3001/audit/calls', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => setCalls(Array.isArray(data) ? data : []))
-      .catch(console.error);
+    const fetchDashboard = () => {
+      fetch('http://localhost:3001/audit/calls', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setCalls(Array.isArray(data) ? data : []))
+        .catch(console.error);
+    };
+    fetchDashboard();
+    const interval = setInterval(fetchDashboard, 5000);
+    return () => clearInterval(interval);
   }, [token]);
+
+  const liveAlerts = calls.slice(0, 8).map(call => ({
+    id: call.id,
+    time: new Date(call.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    agent: call.agentId || 'Unknown',
+    msg: call.isAutomaticFail ? 'Critical compliance violation detected' : call.status === 'COMPLETED' ? 'Audit verified successfully' : call.status === 'FAILED' ? 'Processing error encountered' : 'New call ingested',
+    severity: call.riskLevel === 'HIGH' || call.isAutomaticFail ? 'CRITICAL' : call.riskLevel === 'MEDIUM' ? 'WARNING' : call.status === 'COMPLETED' ? 'SUCCESS' : 'INFO',
+    code: call.externalId
+  }));
 
   return (
     <AppLayout>
@@ -64,36 +63,6 @@ export default function Home() {
           {/* Heatmap Section */}
           <RiskHeatmap calls={calls} />
 
-          {/* Cluster Breakdown Section */}
-          <Card className="p-6 border-gray-100 shadow-sm bg-white">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Cluster Breakdown</h3>
-              <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                LIVE STREAM
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {CLUSTERS.map((cluster, idx) => (
-                <div key={cluster.name} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-700">Cluster {String(idx + 1).padStart(2, '0')} · {cluster.name}</span>
-                    <div className="flex gap-4 text-[10px] font-black tracking-tighter">
-                      <span className="text-green-500">{cluster.pass}%</span>
-                      <span className="text-yellow-500">{cluster.warn}%</span>
-                      <span className="text-red-500">{cluster.fail}%</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex">
-                    <div style={{ width: `${cluster.pass}%` }} className="bg-green-500 h-full" />
-                    <div style={{ width: `${cluster.warn}%` }} className="bg-yellow-400 h-full" />
-                    <div style={{ width: `${cluster.fail}%` }} className="bg-red-500 h-full" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
 
         {/* Right Alert Sidebar */}
@@ -107,7 +76,9 @@ export default function Home() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {MOCK_ALERTS.map((alert) => (
+            {liveAlerts.length === 0 ? (
+              <div className="p-8 text-center text-xs text-gray-400 font-bold uppercase tracking-widest">No recent alerts</div>
+            ) : liveAlerts.map((alert) => (
               <div key={alert.id} className="p-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer relative">
                 <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">

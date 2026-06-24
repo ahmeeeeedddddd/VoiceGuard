@@ -115,8 +115,27 @@ export class WorkspaceService {
     // Save results if they were successfully generated (not fallback PENDING)
     if (automatedResults.length > 0 && automatedResults[0].status !== 'PENDING') {
       call.aiResults = automatedResults;
+
+      // Compute and persist score + riskLevel immediately so heatmap/reports reflect data without Submit
+      let pointsEarned = 0;
+      let totalPoints = 0;
+      let isAutomaticFail = false;
+      for (const rule of rules) {
+        totalPoints += rule.points;
+        const result = automatedResults.find(r => r.ruleId === rule.id);
+        if (result && result.status === 'PASSED') {
+          pointsEarned += rule.points;
+        } else if (result && result.status === 'FAILED' && rule.isCriticalFail) {
+          isAutomaticFail = true;
+        }
+      }
+      const rawScore = totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0;
+      call.score = Math.round(rawScore * 10) / 10;
+      call.isAutomaticFail = isAutomaticFail;
+      call.riskLevel = call.score < 60 || isAutomaticFail ? 'HIGH' : call.score < 85 ? 'MEDIUM' : 'LOW';
+
       await this.callRepository.save(call);
-      this.logger.log(`[PERSISTENCE] Saved AI results for call: ${call.externalId}`);
+      this.logger.log(`[PERSISTENCE] Saved AI results + score ${call.score}% (${call.riskLevel}) for call: ${call.externalId}`);
     }
 
     return { call, rules, automatedResults };
@@ -149,7 +168,9 @@ export class WorkspaceService {
     if (!call) throw new NotFoundException('Call not found');
 
     const rules = await this.ruleService.getActiveRules();
-    const automatedResults = call.transcript ? await this.auditAiService.auditTranscription(call.transcript.fullText, rules) : [];
+    const automatedResults = (call.aiResults && call.aiResults.length > 0 && call.aiResults[0].status !== 'PENDING')
+      ? call.aiResults
+      : (call.transcript ? await this.auditAiService.auditTranscription(call.transcript.fullText, rules) : []);
 
     let pointsEarned = 0;
     let totalPoints = 0;
@@ -183,9 +204,15 @@ export class WorkspaceService {
     const rawScore = totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0;
     call.score = Math.round(rawScore * 10) / 10; // round to 1 decimal
     call.isAutomaticFail = isAutomaticFail;
+    call.riskLevel = call.score < 60 || isAutomaticFail ? 'HIGH' : call.score < 85 ? 'MEDIUM' : 'LOW';
     call.status = AuditStatus.COMPLETED;
     call.lastAuditedAt = new Date();
     call.auditedBy = auditorName;
+
+    // Resave aiResults if it was just calculated to prevent future sync issues
+    if (automatedResults.length > 0 && automatedResults[0].status !== 'PENDING') {
+      call.aiResults = automatedResults;
+    }
 
     return this.callRepository.save(call);
   }

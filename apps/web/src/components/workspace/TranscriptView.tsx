@@ -76,6 +76,24 @@ export function TranscriptView({
     return result;
   }, [transcript]);
 
+  const handleExportVtt = () => {
+    if (!transcript || !turns.length) return;
+    let vtt = "WEBVTT\n\n";
+    turns.forEach((t) => {
+      const start = new Date(t.startMs).toISOString().substring(11, 23);
+      const end = new Date(t.endMs).toISOString().substring(11, 23);
+      vtt += `${start} --> ${end}\n`;
+      vtt += `<v ${t.speaker}>${t.text}\n\n`;
+    });
+    const blob = new Blob([vtt], { type: 'text/vtt' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript.vtt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!transcript) {
     return (
       <Card className="h-full flex items-center justify-center border-gray-100 shadow-sm bg-white/80 grayscale opacity-50">
@@ -99,7 +117,7 @@ export function TranscriptView({
             <p className="text-[10px] text-gray-400 font-medium">{turns.length} turns • {transcript.language || 'English'}</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-bold uppercase tracking-wider">
+        <Button variant="outline" size="sm" className="h-8 gap-2 text-[10px] font-bold uppercase tracking-wider" onClick={handleExportVtt}>
           Export .vtt
           <Download size={12} />
         </Button>

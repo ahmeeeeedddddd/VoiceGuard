@@ -73,7 +73,7 @@ export default function ReportsIndex() {
               <table className="min-w-full divide-y divide-gray-50">
                 <thead className="bg-gray-50/50">
                   <tr>
-                    {['External ID', 'Agent', 'Status', 'Score', 'Risk', 'Created', 'Action'].map(h => (
+                    {['External ID', 'Status', 'Score', 'Risk', 'Created', 'Action'].map(h => (
                       <th key={h} className="px-6 py-3 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
@@ -84,7 +84,6 @@ export default function ReportsIndex() {
                       <td className="px-6 py-4">
                         <p className="text-xs font-bold text-gray-900 font-mono">{call.externalId}</p>
                       </td>
-                      <td className="px-6 py-4 text-xs text-gray-600">{call.agentId || '—'}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full border ${statusColor[call.status] || 'bg-gray-50 text-gray-400 border-gray-100'}`}>
                           {call.status}

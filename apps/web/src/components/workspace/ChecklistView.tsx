@@ -21,6 +21,7 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
   onToggleEdit?: () => void;
 }) {
   const [localOverrides, setLocalOverrides] = React.useState<Record<string, 'PASS' | 'FAIL'>>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { token, user } = useAuth();
   
   const authHeaders = { 
@@ -47,6 +48,7 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
   const pendingCount = checklist.length - passedCount - failedCount;
 
   const handleReportSubmit = async () => {
+    setIsSubmitting(true);
     try {
       const response = await fetch(`http://localhost:3001/audit/workspace/${callId}/submit`, {
         method: 'POST',
@@ -59,8 +61,15 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const calculatedScore = checklist.length > 0 ? Math.round((passedCount/checklist.length)*100) : 100;
+  const inferredRisk = calculatedScore < 60 ? 'HIGH' : calculatedScore < 85 ? 'MEDIUM' : 'LOW';
+  const riskColor = inferredRisk === 'HIGH' ? 'text-red-500' : inferredRisk === 'MEDIUM' ? 'text-orange-500' : 'text-green-500';
+  const riskBorder = inferredRisk === 'HIGH' ? 'border-red-100' : inferredRisk === 'MEDIUM' ? 'border-orange-100' : 'border-green-100';
 
   return (
     <Card className="h-full flex flex-col border-gray-100 shadow-sm bg-white/80 backdrop-blur-sm overflow-hidden">
@@ -82,9 +91,9 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
       </div>
 
       <div className="p-4 grid grid-cols-3 gap-3 border-b border-gray-50 bg-gray-50/30">
-        <MetricCard label="COMPLIANCE" value={passedCount > 0 ? `${Math.round((passedCount/checklist.length)*100)}%` : '0%'} color="text-red-500" border="border-red-100" />
-        <MetricCard label="RESOLUTION" value="—" color="text-gray-300" border="border-gray-100" />
-        <MetricCard label="POLICY" value="100" color="text-green-500" border="border-green-100" />
+        <MetricCard label="COMPLIANCE" value={`${calculatedScore}%`} color={calculatedScore >= 75 ? "text-green-500" : "text-red-500"} border={calculatedScore >= 75 ? "border-green-100" : "border-red-100"} />
+        <MetricCard label="RISK LEVEL" value={inferredRisk} color={riskColor} border={riskBorder} />
+        <MetricCard label="EVALUATED" value={`${checklist.length} rules`} color="text-blue-500" border="border-blue-100" />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -166,10 +175,11 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
         <Button 
           variant="primary" 
           size="sm" 
-          className="h-8 rounded-full text-[10px] font-bold uppercase tracking-widest px-4"
+          disabled={isSubmitting}
+          className="h-8 rounded-full text-[10px] font-bold uppercase tracking-widest px-4 transition-all"
           onClick={handleReportSubmit}
         >
-          Submit Final Report
+          {isSubmitting ? 'Submitting...' : 'Submit Final Report'}
         </Button>
       </div>
     </Card>

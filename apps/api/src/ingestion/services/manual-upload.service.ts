@@ -24,11 +24,16 @@ export class ManualUploadService {
 
     const audioUrl = `uploads/${file.filename}`; 
 
+    const finalSource = (sourceName as any) || 'MANUAL_UPLOAD';
+    const sourceCount = await this.callRepository.count({ where: { source: finalSource } });
+    const prefix = finalSource === 'API_SIMULATOR' ? 'API' : 'MANUAL';
+    const sequentialId = `${prefix}-${sourceCount + 1}`;
+
     const call = this.callRepository.create({
       id: uuidv4(),
-      externalId: `MANUAL-${Date.now()}`,
+      externalId: sequentialId,
       audioUrl,
-      source: (sourceName as any) || 'MANUAL_UPLOAD',
+      source: finalSource,
       status: AuditStatus.PROCESSING,
     });
 
