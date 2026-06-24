@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import Head from 'next/head';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@voiceguard/ui';
@@ -39,10 +40,10 @@ const StatCard = ({ title, value, trend, trendValue, icon: Icon, color }: any) =
   );
 };
 
-const GrowthChart = () => {
+const GrowthChart = ({ data = [] }: { data?: number[] }) => {
   // SVG Mockup for a smooth line chart
-  const data = [40, 35, 55, 45, 70, 65, 85, 80, 95, 90, 98.41];
-  const points = data.map((val, i) => `${(i / 10) * 100},${100 - val}`).join(' ');
+  const chartData = data.length > 0 ? data : [0];
+  const points = chartData.map((val, i) => `${(i / Math.max(chartData.length - 1, 1)) * 100},${100 - val}`).join(' ');
   
   return (
     <div className="relative w-full h-[300px] mt-8 bg-gray-50/30 rounded-xl border border-gray-100 overflow-hidden group">
@@ -76,10 +77,10 @@ const GrowthChart = () => {
           </linearGradient>
         </defs>
         {/* Points */}
-        {data.map((val, i) => (
+        {chartData.map((val, i) => (
           <circle 
             key={i} 
-            cx={(i / 10) * 100} 
+            cx={(i / Math.max(chartData.length - 1, 1)) * 100} 
             cy={100 - val} 
             r="0.8" 
             fill="white" 
@@ -92,13 +93,37 @@ const GrowthChart = () => {
       {/* Tooltip mockup */}
       <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm border border-gray-100 p-2 rounded-lg text-[10px] font-bold shadow-sm">
         <div className="text-gray-400">CURRENT PERIOD</div>
-        <div className="text-blue-600 text-sm">98.41% Compliance</div>
+        <div className="text-blue-600 text-sm">{chartData[chartData.length - 1].toFixed(2)}% Compliance</div>
       </div>
     </div>
   );
 };
 
 export default function AnalyticsPage() {
+  const [calls, setCalls] = useState<any[]>([]);
+
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('http://localhost:3001/audit/calls', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setCalls(Array.isArray(data) ? data : []))
+      .catch(console.error);
+  }, [token]);
+
+  const totalCalls = calls.length;
+  const criticalViolations = calls.filter(c => c.isAutomaticFail).length;
+  const avgScore = totalCalls > 0 
+    ? calls.reduce((acc, c) => acc + (c.score || 0), 0) / totalCalls 
+    : 0;
+  
+  // Take last 15 calls for growth chart
+  const growthData = calls.slice(-15).map(c => c.score || 0);
+  if (growthData.length === 0) growthData.push(0);
+
   return (
     <AppLayout>
       <Head><title>Analytics | VoiceGuard AI</title></Head>
@@ -122,26 +147,26 @@ export default function AnalyticsPage() {
           {/* Top Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard 
-              title="Calls / Hour" 
-              value="12,847" 
+              title="Total Audits" 
+              value={totalCalls.toLocaleString()} 
               trend="up" 
-              trendValue="+4.2%" 
+              trendValue="+1" 
               icon={Clock} 
               color="blue" 
             />
             <StatCard 
               title="Compliance Score" 
-              value="98.41%" 
+              value={`${avgScore.toFixed(2)}%`} 
               trend="up" 
-              trendValue="+0.12%" 
+              trendValue="+0.1%" 
               icon={ShieldCheck} 
               color="green" 
             />
             <StatCard 
               title="Critical Violations" 
-              value="27" 
+              value={criticalViolations.toString()} 
               trend="down" 
-              trendValue="-18%" 
+              trendValue="-1" 
               icon={AlertTriangle} 
               color="orange" 
             />
@@ -174,7 +199,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </div>
-              <GrowthChart />
+              <GrowthChart data={growthData} />
             </Card>
 
             {/* Side Distribution */}

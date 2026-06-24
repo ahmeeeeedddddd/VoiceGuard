@@ -2,7 +2,7 @@ import React from 'react';
 import { TrendingUp } from 'lucide-react';
 import { Card } from '@voiceguard/ui';
 
-export function RiskHeatmap() {
+export function RiskHeatmap({ calls = [] }: { calls?: any[] }) {
   const getColor = (score: number) => {
     if (score > 85) return 'bg-[#10b981]'; // Green (Pass)
     if (score > 60) return 'bg-[#f59e0b]'; // Orange (Warn)
@@ -27,11 +27,14 @@ export function RiskHeatmap() {
 
       <div className="grid grid-cols-24 gap-1.5">
         {Array.from({ length: 240 }).map((_, i) => {
-            const score = Math.random() * 100;
+            const call = calls[i];
+            const score = call && call.score != null ? call.score : 0;
+            const isIdle = !call || call.score == null;
             return (
                 <div 
                     key={i}
-                    className={`aspect-square w-full rounded-[4px] transition-all duration-300 cursor-pointer ${getColor(score)} shadow-inner border border-black/5 hover:scale-125 hover:z-10`}
+                    title={call ? `Call ${call.externalId}: ${score}%` : 'Idle'}
+                    className={`aspect-square w-full rounded-[4px] transition-all duration-300 cursor-pointer ${isIdle ? 'bg-[#e5e7eb]' : getColor(score)} shadow-inner border border-black/5 hover:scale-125 hover:z-10`}
                 />
             );
         })}

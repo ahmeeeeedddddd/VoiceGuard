@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { CallRecord, ChecklistRule, ChecklistResult } from '@voiceguard/shared';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface WorkspaceData {
   call: CallRecord;
@@ -13,21 +14,22 @@ interface WorkspaceData {
 export default function ReportView() {
   const router = useRouter();
   const { id } = router.query;
+  const { token } = useAuth();
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
+    if (!id || !token) return;
     setError(null);
-    fetch(`http://localhost:3001/audit/workspace/${id}`)
+    fetch(`http://localhost:3001/audit/workspace/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
         return res.json();
       })
       .then((json) => {
-        // Ensure the response is a valid workspace object, not an error body
         if (!json.call) throw new Error('Invalid response: missing call data');
         setData(json);
       })
@@ -35,7 +37,7 @@ export default function ReportView() {
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, token]);
 
   if (loading) {
     return (

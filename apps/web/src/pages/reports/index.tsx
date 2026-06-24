@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CallRecord {
   id: string;
@@ -18,13 +19,22 @@ interface CallRecord {
 export default function ReportsIndex() {
   const [calls, setCalls] = useState<CallRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
-    fetch('http://localhost:3001/audit/calls')
+    if (!token) return;
+    fetch('http://localhost:3001/audit/calls', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(res => res.ok ? res.json() : [])
-      .then(data => { setCalls(Array.isArray(data) ? data : []); setLoading(false); })
+      .then(data => {
+        const all = Array.isArray(data) ? data : [];
+        // Only show calls that have been submitted (COMPLETED status)
+        setCalls(all.filter((c: CallRecord) => c.status === 'COMPLETED'));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
-  }, []);
+  }, [token]);
 
   const statusColor: Record<string, string> = {
     COMPLETED: 'bg-green-50 text-green-700 border-green-100',
@@ -56,7 +66,7 @@ export default function ReportsIndex() {
               <div className="p-6 text-center text-sm text-gray-400">Loading calls...</div>
             ) : calls.length === 0 ? (
               <div className="p-6 text-center space-y-2">
-                <p className="text-sm text-gray-400">No calls ingested yet.</p>
+                <p className="text-sm text-gray-400">No reports generated yet.</p>
                 <p className="text-xs text-gray-300">Run <code className="bg-gray-50 px-1.5 py-0.5 rounded font-mono">node scripts/test-webhook.mjs</code> to simulate one.</p>
               </div>
             ) : (

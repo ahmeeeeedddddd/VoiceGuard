@@ -9,7 +9,6 @@ import {
   Settings,
   FileText,
   Users,
-  Activity,
   Database
 } from 'lucide-react';
 import { cn } from '@voiceguard/ui';
@@ -30,14 +29,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 border-r border-gray-100 bg-gray-50/50 flex flex-col h-screen print:hidden">
-      <div className="p-6 flex items-center gap-2 mb-4">
-        <div className="bg-blue-600 p-1.5 rounded-lg text-white">
-          <Activity size={20} />
-        </div>
-        <div>
-          <h1 className="text-sm font-bold tracking-tight text-gray-900 uppercase">VoiceGuard</h1>
-          <p className="text-[10px] text-gray-400 font-medium tracking-widest uppercase">AI Governance</p>
-        </div>
+      <div className="px-4 pt-5 pb-3 flex items-center justify-center mb-2">
+        <img src="/logo.png" alt="VoiceGuard AI" className="w-24 h-24 object-cover rounded-2xl shadow-sm" />
       </div>
 
       <nav className="flex-1 px-4 space-y-1">

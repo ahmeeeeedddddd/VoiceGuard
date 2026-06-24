@@ -9,6 +9,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { Card, Button, Badge } from '@voiceguard/ui';
+import { useAuth } from '@/contexts/AuthContext';
 
 const cn = (...classes: (string | undefined | false)[]) => classes.filter(Boolean).join(' ');
 
@@ -20,9 +21,12 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
   onToggleEdit?: () => void;
 }) {
   const [localOverrides, setLocalOverrides] = React.useState<Record<string, 'PASS' | 'FAIL'>>({});
+  const { token, user } = useAuth();
   
-  // Also pass the auth header since the guard expects it
-  const DEV_HEADERS = { 'Content-Type': 'application/json', 'x-mock-role': 'ADMIN' };
+  const authHeaders = { 
+    'Content-Type': 'application/json', 
+    'Authorization': `Bearer ${token}` 
+  };
 
   const handleOverride = async (ruleId: string, status: 'PASSED' | 'FAILED') => {
     // Optimistic UI update
@@ -30,7 +34,7 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
     try {
       await fetch(`http://localhost:3001/audit/workspace/${callId}/override`, {
         method: 'POST',
-        headers: DEV_HEADERS,
+        headers: authHeaders,
         body: JSON.stringify({ ruleId, status, justification: 'Manual Auditor Override' }),
       });
     } catch (err) {
@@ -46,8 +50,8 @@ export function ChecklistView({ currentTime, checklist = [], callId, isEditing =
     try {
       const response = await fetch(`http://localhost:3001/audit/workspace/${callId}/submit`, {
         method: 'POST',
-        headers: DEV_HEADERS,
-        body: JSON.stringify({ auditorName: 'User' }),
+        headers: authHeaders,
+        body: JSON.stringify({ auditorName: user?.name || 'Auditor' }),
       });
       if (response.ok) {
         alert('Report submitted successfully! Returning to workspace index.');

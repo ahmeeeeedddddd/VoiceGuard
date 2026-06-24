@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import Head from 'next/head';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { RiskHeatmap } from '@/components/dashboard/RiskHeatmap';
@@ -35,6 +36,19 @@ const CLUSTERS = [
 ];
 
 export default function Home() {
+  const [calls, setCalls] = useState<any[]>([]);
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('http://localhost:3001/audit/calls', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setCalls(Array.isArray(data) ? data : []))
+      .catch(console.error);
+  }, [token]);
+
   return (
     <AppLayout>
       <Head>
@@ -48,7 +62,7 @@ export default function Home() {
           <ManualUpload />
 
           {/* Heatmap Section */}
-          <RiskHeatmap />
+          <RiskHeatmap calls={calls} />
 
           {/* Cluster Breakdown Section */}
           <Card className="p-6 border-gray-100 shadow-sm bg-white">
