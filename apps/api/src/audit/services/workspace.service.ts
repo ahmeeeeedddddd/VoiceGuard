@@ -107,7 +107,10 @@ export class WorkspaceService {
 
     // PERSISTENCE: Check if we already have saved AI results to avoid redundant runs
     if (call.aiResults && Array.isArray(call.aiResults) && call.aiResults.length > 0) {
-      return { call, rules, automatedResults: call.aiResults };
+      // Only show rules that were part of the original audit — filter out rules added afterwards
+      const auditedRuleIds = new Set(call.aiResults.map((r: any) => r.ruleId));
+      const auditedRules = rules.filter(r => auditedRuleIds.has(r.id));
+      return { call, rules: auditedRules, automatedResults: call.aiResults };
     }
 
     const automatedResults = call.transcript ? await this.auditAiService.auditTranscription(call.transcript.fullText, rules) : [];
@@ -148,6 +151,40 @@ export class WorkspaceService {
     const overrides = call.overrides || {};
     overrides[ruleId] = { status, justification };
     call.overrides = overrides;
+
+    // Recalculate score immediately using saved aiResults + all overrides
+    if (call.aiResults && call.aiResults.length > 0) {
+      const rules = await this.ruleService.getActiveRules();
+      const auditedRuleIds = new Set(call.aiResults.map((r: any) => r.ruleId));
+      const auditedRules = rules.filter(r => auditedRuleIds.has(r.id));
+
+      let pointsEarned = 0;
+      let totalPoints = 0;
+      let isAutomaticFail = false;
+
+      for (const rule of auditedRules) {
+        totalPoints += rule.points;
+        const override = overrides[rule.id];
+        let finalStatus: string;
+        if (override) {
+          finalStatus = override.status;
+        } else {
+          const aiResult = call.aiResults.find((r: any) => r.ruleId === rule.id);
+          finalStatus = aiResult ? aiResult.status : 'FAILED';
+        }
+        if (finalStatus === 'PASSED') {
+          pointsEarned += rule.points;
+        } else if (finalStatus === 'FAILED' && rule.isCriticalFail) {
+          isAutomaticFail = true;
+        }
+      }
+
+      const rawScore = totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0;
+      call.score = Math.round(rawScore * 10) / 10;
+      call.isAutomaticFail = isAutomaticFail;
+      call.riskLevel = call.score < 60 || isAutomaticFail ? 'HIGH' : call.score < 85 ? 'MEDIUM' : 'LOW';
+      this.logger.log(`[OVERRIDE] Recalculated score: ${call.score}% (${call.riskLevel}) for call: ${call.externalId}`);
+    }
 
     return this.callRepository.save(call);
   }
