@@ -6,5 +6,4 @@ dist
 **/dist
 postgres-data
 uploads
-.git
 .env

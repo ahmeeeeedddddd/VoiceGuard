@@ -1,4 +1,4 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package configuration files
@@ -22,7 +22,7 @@ RUN npm run build -w @voiceguard/shared
 RUN npm run build -w api
 
 # Runner stage
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
