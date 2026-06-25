@@ -51,66 +51,35 @@ Before running the project, make sure you have installed:
 
 ## Getting Started — Run the Project
 
-Follow these **5 commands in order** from the project root:
+Running the entire platform is now fully dockerised. Follow these steps:
 
-### Step 1 — Start infrastructure (database + message broker)
+### Step 1 — Prepare Environment Variables
 
-```bash
-docker compose up
+Create a `.env` file in the root directory of the project and add your API keys:
+
+```env
+# Required — obtain from https://deepgram.com
+DEEPGRAM_API_KEY=your_deepgram_api_key_here
+
+# Required for AI Auditor - obtain from OpenRouter
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
-This starts:
-- **PostgreSQL** on `localhost:5434` (database: `voiceguard_db`, user: `voiceguard_user`, password: `voiceguard_password`)
+### Step 2 — Start the Platform
+
+Run the following command from the project root:
+
+```bash
+docker compose up --build
+```
+
+This starts all services:
+- **PostgreSQL** on `localhost:5434`
 - **Redis** on `localhost:6379`
+- **VoiceGuard API** on `http://localhost:3001`
+- **VoiceGuard Web App** on `http://localhost:3000`
 
-> Leave this terminal running. Open a new terminal for subsequent commands.
-
----
-
-### Step 2 — Build shared types
-
-```bash
-npm run build -w @voiceguard/shared
-```
-
-Compiles the shared TypeScript package (`AuditStatus`, `Role`, `User`, `CallRecord` interfaces) that both the API and web app depend on. This **must** be run before the API or web can start.
-
----
-
-### Step 3 — Install the static file server dependency
-
-```bash
-npm install @nestjs/serve-static -w api --legacy-peer-deps
-```
-
-This installs the NestJS module that serves uploaded audio files from the `./uploads` directory so the frontend can stream them directly. The `--legacy-peer-deps` flag is required to avoid version conflicts with the existing NestJS tree.
-
----
-
-### Step 4 — Start the API server
-
-```bash
-npm run start:dev -w api
-```
-
-Starts the NestJS backend in watch mode on **http://localhost:3001**.
-
-> **Required:** Before starting the API, create the file `apps/api/.env` and add your Deepgram key:
-> ```
-> DEEPGRAM_API_KEY=your_key_here
-> ```
-
----
-
-### Step 5 — Start the web application
-
-```bash
-npm run dev -w web
-```
-
-Starts the Next.js frontend in dev mode on **http://localhost:3000**.
-
-You are now fully up and running! Navigate to `http://localhost:3000` to access the VoiceGuard platform.
+Once started, navigate to `http://localhost:3000` to access the platform.
 
 ---
 
@@ -346,14 +315,17 @@ Navigate to **Users** in the sidebar to manage team members.
 
 ## Environment Variables
 
-Create `apps/api/.env` with the following:
+The project reads API keys and config from the `.env` file at the root directory:
 
 ```env
 # Required — obtain from https://deepgram.com
 DEEPGRAM_API_KEY=your_deepgram_api_key_here
+
+# Required for AI Auditor - obtain from OpenRouter
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
-All database and Redis connection details are pre-configured to match `docker-compose.yml` and require no changes for local development.
+All other database and Redis connection details are automatically handled via the Docker Compose environment setup.
 
 ---
 

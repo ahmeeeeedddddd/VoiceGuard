@@ -25,24 +25,24 @@ import { join } from 'path';
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: '127.0.0.1',
-      port: 5434,
-      username: 'voiceguard_user',
-      password: 'voiceguard_password',
-      database: 'voiceguard_db',
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: parseInt(process.env.DB_PORT || '5434', 10),
+      username: process.env.DB_USER || 'voiceguard_user',
+      password: process.env.DB_PASSWORD || 'voiceguard_password',
+      database: process.env.DB_NAME || 'voiceguard_db',
       entities: [CallRecordEntity, ChecklistRuleEntity, UserEntity],
       autoLoadEntities: true,
       synchronize: true, // Disable in production
     }),
     BullModule.forRoot({
       redis: {
-        host: '127.0.0.1',
-        port: 6379,
+        host: process.env.REDIS_HOST || '127.0.0.1',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
       },
     }),
     RedisModule.forRoot({
       type: 'single',
-      url: 'redis://127.0.0.1:6379',
+      url: `redis://${process.env.REDIS_HOST || '127.0.0.1'}:${process.env.REDIS_PORT || '6379'}`,
     }),
 
     RealtimeModule,

@@ -30,7 +30,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 border-r border-gray-100 bg-gray-50/50 flex flex-col h-screen print:hidden">
       <div className="px-4 pt-5 pb-3 flex items-center justify-center mb-2">
-        <img src="/logo.png" alt="VoiceGuard AI" className="w-24 h-24 object-cover rounded-2xl shadow-sm" />
+        <img src="/logo.png" alt="VoiceGuard AI" className="w-40 h-20 object-contain" />
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
