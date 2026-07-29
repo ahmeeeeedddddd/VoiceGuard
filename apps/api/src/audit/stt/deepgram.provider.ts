@@ -39,7 +39,7 @@ export class DeepgramProvider implements ISttProvider {
     }
 
     return new Promise((resolve, reject) => {
-      const url = new URL(`${this.apiUrl}?model=nova-2&smart_format=true&utterances=true&words=true&diarize=true`);
+      const url = new URL(`${this.apiUrl}?model=nova-2&smart_format=true&utterances=true&words=true&diarize=true&vad_events=true`);
 
       const req = https.request(
         {
@@ -72,20 +72,39 @@ export class DeepgramProvider implements ISttProvider {
 
   private mapToTranscriptPayload(response: any): TranscriptPayload {
     const channel = response?.results?.channels?.[0]?.alternatives?.[0];
+    const speechEvents = response?.results?.channels?.[0]?.speech_events;
+
     if (!channel) {
       throw new Error('Invalid Deepgram response structure');
     }
 
-    const words: TranscriptWord[] = (channel.words || []).map((w: any) => ({
-      word: w.word,
+    let rawWords = channel.words || [];
+
+    // Filter out words that fall completely outside of any speech_events
+    if (speechEvents && Array.isArray(speechEvents) && speechEvents.length > 0) {
+      rawWords = rawWords.filter((w: any) => {
+        // Find if word overlaps with any speech event
+        return speechEvents.some((event: any) => {
+          // Deepgram sometimes returns a 'type' or just start/end
+          // We check if the word is roughly within the speech bounds
+          return w.start >= event.start && w.end <= event.end;
+        });
+      });
+    }
+
+    const words: TranscriptWord[] = rawWords.map((w: any) => ({
+      word: w.punctuated_word || w.word,
       startMs: Math.round(w.start * 1000),
       endMs: Math.round(w.end * 1000),
       confidence: w.confidence,
       speaker: w.speaker, // Map Deepgram speaker ID
     }));
 
+    // Reconstruct transcript text from filtered words to exclude hallucinatory noise
+    const fullText = words.map(w => w.word).join(' ');
+
     return {
-      fullText: channel.transcript || '',
+      fullText: fullText || channel.transcript || '',
       words,
       sttProvider: 'DEEPGRAM',
       language: response?.results?.channels?.[0]?.detected_language,

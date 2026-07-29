@@ -8,6 +8,7 @@ import { ISttProvider, STT_PROVIDER_TOKEN } from '../stt/stt.interface';
 import { AuditStatus } from '@voiceguard/shared';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bullmq';
+import { VadService } from '../services/vad.service';
 
 @Processor('transcription')
 export class TranscriptionProcessor {
@@ -20,6 +21,7 @@ export class TranscriptionProcessor {
     private readonly sttProvider: ISttProvider,
     @InjectQueue('validation')
     private readonly validationQueue: Queue,
+    private readonly vadService: VadService,
   ) {}
 
   @Process('transcribe-call')
@@ -38,7 +40,34 @@ export class TranscriptionProcessor {
     await this.callRecordRepo.save(record);
 
     try {
-      const transcript = await this.sttProvider.transcribe(record.audioUrl);
+      // Run VAD preprocessing first to strip silence
+      const vadResult = await this.vadService.processAudio(record.audioUrl);
+      const processedAudioUrl = vadResult.outputPath;
+      const segments = vadResult.segments;
+      
+      const transcript = await this.sttProvider.transcribe(processedAudioUrl);
+
+      // Re-map timestamps back to original audio based on the segments offsets
+      if (segments && segments.length > 0 && transcript.words) {
+        for (const word of transcript.words) {
+          // Find which new segment this word falls into
+          // Since there might be some overlap or words spanning boundaries,
+          // we find the segment that contains the start time or is closest.
+          let matchedSegment = segments.find(s => word.startMs >= s.newStartMs && word.startMs <= s.newEndMs);
+          
+          if (!matchedSegment) {
+            // Fallback: just use the last one if it goes slightly over
+            matchedSegment = segments[segments.length - 1];
+          }
+
+          // Calculate offset: how much was original time shifted?
+          // offset = originalStartMs - newStartMs
+          const offsetMs = matchedSegment.originalStartMs - matchedSegment.newStartMs;
+
+          word.startMs += offsetMs;
+          word.endMs += offsetMs;
+        }
+      }
 
       record.transcript = transcript;
       record.transcribedAt = new Date();

@@ -15,6 +15,7 @@ import { WorkspaceController } from './controllers/workspace.controller';
 import { ChecklistRuleController } from './controllers/checklist-rule.controller';
 import { WorkspaceService } from './services/workspace.service';
 import { AuditAiService } from './services/audit-ai.service';
+import { VadService } from './services/vad.service';
 
 const sttProvider = process.env.STT_PROVIDER === 'whisper'
   ? { provide: STT_PROVIDER_TOKEN, useClass: WhisperProvider }
@@ -36,7 +37,8 @@ const sttProvider = process.env.STT_PROVIDER === 'whisper'
     ValidationProcessor,
     WorkspaceService,
     AuditAiService,
+    VadService,
   ],
-  exports: [WorkspaceService, ChecklistValidatorService, sttProvider],
+  exports: [WorkspaceService, ChecklistValidatorService, sttProvider, VadService],
 })
 export class AuditModule {}

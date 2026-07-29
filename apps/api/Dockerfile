@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 
 # Copy package configuration files
@@ -22,9 +22,12 @@ RUN npm run build -w @voiceguard/shared
 RUN npm run build -w api
 
 # Runner stage
-FROM node:20-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Install ffmpeg for Silero VAD preprocessing
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 # Copy node_modules, built files, and apps
 COPY --from=builder /app/package*.json ./
